@@ -1,5 +1,6 @@
 import System.Environment
-import Chore
+import System.IO
+import ChoreParser
 
 type Pattern = String
 
@@ -10,10 +11,10 @@ data Doer = Doer { name :: String,
 
 main :: IO ()
 main = do
-  chores <- parseChores "chores.txt"
-  case chores of
-    (x:_) -> do
-      putStrLn "First chore:"
-      putStrLn $ show x
-    _ -> do
-      putStrLn "No chores!"
+  let choresfn = "chores.txt"
+  chorestxt <- readFile choresfn
+  case runChoresParser choresfn chorestxt of
+    Right chores -> do
+      mapM_ (putStrLn . show) chores
+    Left err -> do
+      hPutStrLn stderr err

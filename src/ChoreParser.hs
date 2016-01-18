@@ -39,7 +39,8 @@ choreParser = do
     _difficulty <- difficultyParser
     spaces'
     _ <- commentOrNewline
-    _desc <- manyTill anyChar (try (blankSpace <|> eofAndSpaces))
+    _desc <- (newline >> return "")
+         <|> manyTill anyChar (try (blankSpace <|> eofAndSpaces))
     return $ Chore _title _desc (read _intervalStr) _difficulty
   where
     blankSpace = string "\n\n" >> return ()
