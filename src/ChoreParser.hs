@@ -3,16 +3,8 @@ module ChoreParser (runChoresParser)
 
 import Text.Parsec
 import Text.Parsec.Error
+import ParserCommon
 import Chore
-
-comment :: Parsec String () Char
-comment = do
-  _ <- char '#'
-  skipMany $ noneOf [ '\n' ]
-  newline
-
-commentOrNewline :: Parsec String () Char
-commentOrNewline = comment <|> newline
 
 titleParser :: Parsec String () String
 titleParser = many1 $ noneOf [ '\n', ':' ]
@@ -51,8 +43,7 @@ choreParser = do
 choresParser :: Parsec String () [Chore]
 choresParser = do
   unchore
-  chores <- choreParser `sepBy` unchore
-  unchore
+  chores <- choreParser `endBy` unchore
   return chores
   where
     unchore = skipMany commentOrNewline >> return ()

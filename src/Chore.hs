@@ -7,5 +7,10 @@ data Chore = Chore { title :: String,
                      difficulty :: Int
                    } deriving (Show, Eq)
 
-parseChores :: String -> IO [Chore]
-parseChores _ = return []
+printChore :: Chore -> String
+printChore chore =
+  let c = (title chore) ++ ": " ++ (show $ interval chore) ++ " " ++
+          (show $ difficulty chore)
+  in case length (desc chore) of
+    0 -> c ++ "\n"
+    _ -> c ++ "\n" ++ (desc chore) ++ "\n"
