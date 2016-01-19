@@ -47,9 +47,9 @@ doerParser = do
   kvs <- (keyvalue `endBy` newline) <?> "key values"
   let (_vet, _ass, _abs, _unknown) = processKeys kvs
 
-  -- error on unknown values
+  -- error on unknown keys
   forM_ _unknown $ \(k, v) ->
-    unexpected ("value: " ++ k)
+    unexpected ("key: " ++ k)
 
   -- error on bad time parsing
   _abs' <- forM _abs $ \v ->
