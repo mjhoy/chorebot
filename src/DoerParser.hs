@@ -11,6 +11,29 @@ import ParserCommon
 import Doer
 import Data.List.Extra
 
+processKeys :: [(String, [String])] ->
+               ([Pattern],           -- vetos
+                [Pattern],           -- assigned
+                [Maybe UTCTime],     -- absent
+                [(String, [String])] -- unknown key/values
+               )
+processKeys kvs = (_vet, _ass, _abs, _unknown)
+  where
+    kvs' = groupSort kvs
+    kvs'' = for kvs' $ \(k,v) -> (k, concat v)
+    flt k = filter ((== k) . fst) kvs''
+    sub k = concatMap snd $ flt k
+    subP k = for (sub k) $ \a -> Pattern a
+    parseTime' :: String -> Maybe UTCTime
+    parseTime' t = parseTimeM True defaultTimeLocale "%Y/%m/%d" t
+    _vet = subP "veto"
+    _ass = subP "assigned"
+    _abs = map parseTime' $ sub "absent"
+    _unknown = filter (\(k, v) ->
+                        k /= "veto" &&
+                        k /= "assigned" &&
+                        k /= "absent") kvs''
+
 doerParser :: Parsec String () Doer
 doerParser = do
   skipMany commentOrNewline
@@ -22,27 +45,20 @@ doerParser = do
     return ret <?> "email address"
   newline
   kvs <- (keyvalue `endBy` newline) <?> "key values"
-  let kvs' = groupSort kvs
-      kvs'' = for kvs' $ \(k,v) -> (k, concat v)
-      flt k = filter ((== k) . fst) kvs''
-      sub k = concatMap snd $ flt k
-      subP k = for (sub k) $ \a -> Pattern a
-      parseTime' :: String -> Maybe UTCTime
-      parseTime' t = parseTimeM True defaultTimeLocale "%Y/%m/%d" t
-      _vet = subP "veto"
-      _ass = subP "assigned"
-      _abs = map parseTime' $ sub "absent"
-      _unknown = filter (\(k, v) ->
-                          k /= "veto" &&
-                          k /= "assigned" &&
-                          k /= "absent") kvs''
+  let (_vet, _ass, _abs, _unknown) = processKeys kvs
+
+  -- error on unknown values
   forM_ _unknown $ \(k, v) ->
     unexpected ("value: " ++ k)
+
+  -- error on bad time parsing
   _abs' <- forM _abs $ \v ->
     case v of
       Just t -> return t
       Nothing -> unexpected ("time format: please use YYYY/MM/DD")
+
   return $ Doer _name _email _vet _ass _abs'
+
   where
     keyvalue = do
       key <- liftM (map toLower) $ many1 letter
