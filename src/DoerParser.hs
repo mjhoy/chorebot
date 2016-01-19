@@ -5,9 +5,11 @@ import Text.Parsec
 import Text.Parsec.Error
 import Control.Monad
 import Data.Char
+import Data.List.Extra (trim)
 import Data.Time.Clock (UTCTime)
 import Data.Time.Format (parseTimeM, defaultTimeLocale)
 import ParserCommon
+import TimeCommon
 import Doer
 import Data.List.Extra
 
@@ -24,11 +26,9 @@ processKeys kvs = (_vet, _ass, _abs, _unknown)
     flt k = filter ((== k) . fst) kvs''
     sub k = concatMap snd $ flt k
     subP k = for (sub k) $ \a -> Pattern a
-    parseTime' :: String -> Maybe UTCTime
-    parseTime' t = parseTimeM True defaultTimeLocale "%Y/%m/%d" t
     _vet = subP "veto"
     _ass = subP "assigned"
-    _abs = map parseTime' $ sub "absent"
+    _abs = map cbParseDate $ sub "absent"
     _unknown = filter (\(k, v) ->
                         k /= "veto" &&
                         k /= "assigned" &&
@@ -37,12 +37,8 @@ processKeys kvs = (_vet, _ass, _abs, _unknown)
 doerParser :: Parsec String () Doer
 doerParser = do
   skipMany commentOrNewline
-  _name <- many1 $ noneOf [ '<' ]
-  _email <- do
-    char '<' <?> "email opening bracket"
-    ret <- (many1 $ noneOf [ '>' ]) <?> "email address"
-    char '>' <?> "email closing bracket"
-    return ret <?> "email address"
+  _name <- liftM trim $ many1 $ noneOf [ '<' ]
+  _email <- emailParser
   newline
   kvs <- (keyvalue `endBy` newline) <?> "key values"
   let (_vet, _ass, _abs, _unknown) = processKeys kvs

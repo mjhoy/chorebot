@@ -30,10 +30,12 @@ choreParser = do
     skipMany1 space'
     _difficulty <- difficultyParser
     spaces'
-    _ <- commentOrNewline
+    _ <- newline
+    _ident <- identParser
+    _ <- newline
     _desc <- (newline >> return "")
          <|> manyTill anyChar (try (blankSpace <|> eofAndSpaces))
-    return $ Chore _title _desc (read _intervalStr) _difficulty
+    return $ Chore _title _ident _desc (read _intervalStr) _difficulty
   where
     blankSpace = string "\n\n" >> return ()
     eofAndSpaces = skipMany space >> eof
@@ -44,6 +46,10 @@ choresParser :: Parsec String () [Chore]
 choresParser = do
   unchore
   chores <- choreParser `endBy` unchore
+  -- ensure identifies are unique
+  case findDup (map ident chores) of
+    Just x  -> unexpected $ "duplicate chore identified: " ++ x
+    Nothing -> return ()
   return chores
   where
     unchore = skipMany commentOrNewline >> return ()
