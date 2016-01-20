@@ -33,8 +33,10 @@ assignmentParser = do
   _ <- char ':'
   skipMany $ char ' '
   newline
-  manyTill (assignmentParser' _email) $
+  as <- manyTill (assignmentParser' _email) $
     (lookAhead (string "\n") >> return ()) <|> eof
+  skipMany commentOrNewline
+  return as
   where
     assignmentParser' _email = do
       skipMany $ noneOf [ '<' ]
