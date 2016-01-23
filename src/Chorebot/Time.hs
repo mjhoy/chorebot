@@ -1,4 +1,4 @@
-module TimeCommon where
+module Chorebot.Time where
 
 import Data.Time
 

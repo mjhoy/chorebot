@@ -1,13 +1,16 @@
+module Main (main) where
+
 import System.Environment
 import System.IO
 import System.Exit
 import System.Directory
-import ChoreParser
-import Chore
-import DoerParser
-import Doer
-import AssignmentParser
-import Assignment
+
+import Chorebot.Chore
+import Chorebot.Chore.Parser
+import Chorebot.Doer
+import Chorebot.Doer.Parser
+import Chorebot.Assignment
+import Chorebot.Assignment.Parser
 
 -- helper function
 putErr :: String -> IO ()

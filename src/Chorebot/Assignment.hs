@@ -1,7 +1,8 @@
-module Assignment where
+module Chorebot.Assignment where
 
-import Chore
-import Doer
+import Chorebot.Chore
+import Chorebot.Doer
+
 import Data.Time
 import Data.Time.Format
 import Data.List

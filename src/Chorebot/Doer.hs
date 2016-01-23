@@ -1,4 +1,4 @@
-module Doer where
+module Chorebot.Doer where
 
 import Data.Time
 

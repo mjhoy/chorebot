@@ -1,4 +1,4 @@
-module DoerParser (runDoersParser)
+module Chorebot.Doer.Parser (runDoersParser)
        where
 
 import Text.Parsec
@@ -8,10 +8,11 @@ import Data.Char
 import Data.List.Extra (trim)
 import Data.Time.Clock (UTCTime)
 import Data.Time.Format (parseTimeM, defaultTimeLocale)
-import ParserCommon
-import TimeCommon
-import Doer
 import Data.List.Extra
+
+import Chorebot.ParserHelper
+import Chorebot.Time
+import Chorebot.Doer
 
 processKeys :: [(String, [String])] ->
                ([Pattern],           -- vetos

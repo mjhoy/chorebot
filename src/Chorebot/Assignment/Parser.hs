@@ -1,19 +1,21 @@
-module AssignmentParser
+module Chorebot.Assignment.Parser
        (runAssignmentParser)
        where
 
-import ParserCommon
-import TimeCommon
 import Text.Parsec
 import Text.Parsec.Char
 import Data.Time
 import Data.Either
-import qualified Data.Map.Strict as Map
 import Control.Monad
+import qualified Data.Map.Strict as Map
 import Data.Map (Map)
-import Assignment
-import Chore
-import Doer
+
+import Chorebot.ParserHelper
+import Chorebot.Time
+import Chorebot.Assignment
+import Chorebot.Chore
+import Chorebot.Doer
+
 import Debug.Trace
 
 -- assignment before it has been associated with an actual chore or

@@ -1,4 +1,4 @@
-module Chore where
+module Chorebot.Chore where
 
 -- a chore to be done
 data Chore = Chore { title :: String,

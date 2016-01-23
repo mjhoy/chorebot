@@ -1,4 +1,4 @@
-module ParserCommon where
+module Chorebot.ParserHelper where
 
 import Text.Parsec
 import Text.Parsec.Error

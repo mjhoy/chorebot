@@ -1,10 +1,10 @@
-module ChoreParser (runChoresParser)
+module Chorebot.Chore.Parser (runChoresParser)
        where
 
 import Text.Parsec
 import Text.Parsec.Error
-import ParserCommon
-import Chore
+import Chorebot.ParserHelper
+import Chorebot.Chore
 
 titleParser :: Parsec String () String
 titleParser = many1 $ noneOf [ '\n', ':' ]
