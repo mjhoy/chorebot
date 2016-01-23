@@ -1,0 +1,39 @@
+* chorebot
+
+A simple bot that divvies up chores and sends out emails.
+
+** Defining chores
+
+A list of chores is defined in chores.txt. A chore is defined in a
+special format, separated by a newline from other chores. The basic
+format is:
+
+#+BEGIN_SRC
+[Chore title]: [Interval] [Difficulty]
+[Description]
+#+END_SRC
+
+For instance,
+
+#+BEGIN_SRC
+Third floor bathroom: 1 Hard
+Clean and scrub tub/shower/sink to remove grime, clean toilet bowl,
+sweep and mop floors, clean countertop, clean mirror, change towels
+and floor mats, replenish TP and soap as needed.
+
+Water Plants: 1 Easy
+
+Sweep/mop kitchen: 1 Medium
+For the first week of the month, mop; otherwise sweep.
+#+END_SRC
+
+The description is optional.
+
+The interval is the number of weeks until a chore is repeated. "1"
+means the chore is repeated every week, "2" every other week, and so
+on.
+
+The difficulty is the word "Hard", "Medium" or "Easy". The exact
+calculation may be adjusted, but it should be something like: one hard
+chore is worth slightly less than two medium chores, and one medium
+chore is worth two easy chores.
