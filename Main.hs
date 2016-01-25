@@ -11,6 +11,9 @@ import Chorebot.Doer
 import Chorebot.Doer.Parser
 import Chorebot.Assignment
 import Chorebot.Assignment.Parser
+import Chorebot.Profile
+
+import Data.Time
 
 -- helper function
 putErr :: String -> IO ()
@@ -65,6 +68,12 @@ main = do
       mapM_ (putStrLn . printDoer) doers
     ("list-assignment-history":_) ->
       putStr $ printAssignments assignments
+    ("list-profiles":_) -> do
+      let profiles = map (buildProfile assignments) doers
+      putStrLn "name         diff/day  prev chores"
+      putStrLn "----------------------------------"
+      t <- getCurrentTime
+      mapM_ (putStrLn . (printProfile t)) profiles
     _ -> do
       putErr "unknown action (use --help for more information)"
       exitFailure
