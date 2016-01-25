@@ -14,5 +14,5 @@ data Doer = Doer { name   :: String,
 
 printDoer :: Doer -> String
 printDoer d =
-  "DOER: " ++ name d ++ " " ++
+  name d ++ " " ++
   "<" ++ email d ++ ">"

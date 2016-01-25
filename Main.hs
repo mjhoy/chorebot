@@ -53,6 +53,12 @@ main = do
 
   args <- getArgs
   case args of
+    ("--help":_) ->
+      putErr $ "usage: chorebot COMMAND\n\n" ++
+               "commands:\n" ++
+               "  list-chores              List current chores\n" ++
+               "  list-doers               List current chore-doers\n" ++
+               "  list-assignment-history  List past chore assignments\n"
     ("list-chores":_) ->
       mapM_ (putStrLn . printChore) chores
     ("list-doers":_) ->
@@ -60,5 +66,5 @@ main = do
     ("list-assignment-history":_) ->
       putStr $ printAssignments assignments
     _ -> do
-      putErr "unknown action"
+      putErr "unknown action (use --help for more information)"
       exitFailure
