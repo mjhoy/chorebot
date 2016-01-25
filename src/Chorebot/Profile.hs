@@ -1,6 +1,7 @@
 module Chorebot.Profile
        ( buildProfile
        , printProfile
+       , difficultyPerDay
        ) where
 
 import Chorebot.Doer

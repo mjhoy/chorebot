@@ -1,0 +1,12 @@
+# ~~ assignment history fixture
+
+[2016/01/08]
+
+St. Hildegard <hildegard@test.com>:
+  Mop bathroom <mop-bathroom> 7
+
+
+[2016/01/01]
+
+St. Hildegard <hildegard@test.com>:
+  Bake cookies <bake-cookies> 4

@@ -1,0 +1,9 @@
+# ~~ chores fixtures.
+
+Mop bathroom: 1 Hard
+<mop-bathroom>
+Mop the downstairs bathroom.
+
+Bake cookies: 2 Medium
+<bake-cookies>
+Make cookies for the house.
