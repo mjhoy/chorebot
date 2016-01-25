@@ -1,0 +1,6 @@
+# ~~ doers fixture.
+# ~~
+# ~~ some dummy doers in here.
+
+St. Hildegard <hildegard@test.com>
+Veto: mop*, clean-room,   extra-space

@@ -60,7 +60,8 @@ doerParser = do
     keyvalue = do
       key <- liftM (map toLower) $ many1 letter
       _ <- char ':'
-      vals <- (many1 $ noneOf [ '\n', ',' ]) `sepBy` (char ',')
+      skipMany $ char ' '
+      vals <- (many1 $ noneOf [ '\n', ',' ]) `sepBy` (char ',' >> (skipMany $ char ' '))
       return (key, vals)
 
 doersParser :: Parsec String () [Doer]
@@ -68,7 +69,9 @@ doersParser = do
   doers <- doerParser `sepEndBy` (many1 (commentOrNewline <?> "comment sep"))
   return doers
 
-runDoersParser :: String -> String -> Either String [Doer]
+runDoersParser :: String ->     -- filename to report errors with
+                  String ->     -- text to parse
+                  Either String [Doer]
 runDoersParser filename str =
   case res of
     (Right doers) -> return doers
