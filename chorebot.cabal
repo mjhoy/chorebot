@@ -44,7 +44,6 @@ test-suite spec
   main-is:             Spec.hs
   type:                exitcode-stdio-1.0
   hs-source-dirs:      spec
-  data-files:          spec/fixtures/chores.txt
   other-modules:       Paths_chorebot
   build-depends:       base   >=4.8   && <4.9,
                        chorebot,
