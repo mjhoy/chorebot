@@ -1,5 +1,9 @@
 module Chorebot.Profile
-       ( buildProfile
+       ( Profile
+       , pdoer
+       , assignments
+       , latestChores
+       , buildProfile
        , printProfile
        , difficultyPerDay
        ) where

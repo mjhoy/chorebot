@@ -2,11 +2,53 @@ module Chorebot.DistributorSpec where
 
 import SpecHelper
 import Chorebot.Distributor
+import Chorebot.Profile
+import Chorebot.Assignment
+import Chorebot.Chore
 
 spec :: Spec
 spec = do
 
   describe "Chorebot.Distributor" $ do
+
+    describe "mkAssignment" $ do
+
+      it "should make one assignment" $ do
+
+        let (Just now) = cbParseDate "2016/01/15"
+        (chores, (hildegard:_), assignments) <- fixtureData
+
+        let prof = buildProfile assignments hildegard
+
+        -- first assignment. should assign Hildegard the chore of
+        -- baking cookies.
+        let (chores', assignments', sc) =
+              mkAssignment prof (chores, [], 0) 100 now
+
+        (length chores') `shouldBe` ((length chores) - 1)
+        (length assignments') `shouldBe` 1
+        sc `shouldBe` 1
+        (ident (chore (head assignments'))) `shouldBe` "bake-cookies"
+
+        -- second assignment should *not* assign Hildegard the chore
+        -- of mopping, since it is in her vetoes.
+        let (chores'', assignments'', sc') =
+              mkAssignment prof (chores', assignments', sc) 100 now
+
+        (length chores'') `shouldBe` (length chores')
+        (length assignments'') `shouldBe` 1
+        sc' `shouldBe` 2        -- sc is incremented even though no
+                                -- assignment made.
+
+        -- third assignment should assign mopping, since we are
+        -- setting the sanity check limit low.
+        let (chores''', assignments''', sc'') =
+              mkAssignment prof (chores'', assignments'', sc') 2 now
+
+        (length chores''') `shouldBe` ((length chores'') - 1)
+        (length assignments''') `shouldBe` 2
+        sc'' `shouldBe` 3
+
 
     describe "assignPermanentChores" $ do
 
