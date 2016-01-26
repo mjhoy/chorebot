@@ -4,6 +4,7 @@ import System.Environment
 import System.IO
 import System.Exit
 import System.Directory
+import System.Random
 
 import Chorebot.Chore
 import Chorebot.Chore.Parser
@@ -12,6 +13,7 @@ import Chorebot.Doer.Parser
 import Chorebot.Assignment
 import Chorebot.Assignment.Parser
 import Chorebot.Profile
+import Chorebot.Distributor
 
 import Data.Time
 
@@ -54,6 +56,8 @@ main = do
             exitFailure
       False -> return []
 
+  let profiles = map (buildProfile assignments) doers
+
   args <- getArgs
   case args of
     ("--help":_) ->
@@ -61,7 +65,9 @@ main = do
                "commands:\n" ++
                "  list-chores              List current chores\n" ++
                "  list-doers               List current chore-doers\n" ++
-               "  list-assignment-history  List past chore assignments\n"
+               "  list-assignment-history  List past chore assignments\n" ++
+               "  list-profiles            List profile info\n" ++
+               "  distribute               Make new chore assignments"
     ("list-chores":_) ->
       mapM_ (putStrLn . printChore) chores
     ("list-doers":_) ->
@@ -69,11 +75,19 @@ main = do
     ("list-assignment-history":_) ->
       putStr $ printAssignments assignments
     ("list-profiles":_) -> do
-      let profiles = map (buildProfile assignments) doers
       putStrLn "name         diff/day  prev chores"
       putStrLn "----------------------------------"
       t <- getCurrentTime
       mapM_ (putStrLn . (printProfile t)) profiles
+    ("distribute":_) -> do
+      t <- getCurrentTime
+      gen <- getStdGen
+      let (newAssignments, didForce) = distribute profiles chores assignments t gen
+      case didForce of
+        True -> do
+          putStrLn "WARNING: sanity check flag flipped"
+          putStr $ printAssignments newAssignments
+        False -> putStr $ printAssignments newAssignments
     _ -> do
       putErr "unknown action (use --help for more information)"
       exitFailure

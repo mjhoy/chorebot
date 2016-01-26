@@ -17,7 +17,8 @@ library
                        extra,
                        containers,
                        directory,
-                       regex-compat
+                       regex-compat,
+                       random
   hs-source-dirs:      src
   default-language:    Haskell2010
   exposed-modules:     Chorebot.Chore,      Chorebot.Chore.Parser,
@@ -35,7 +36,8 @@ executable chorebot
   build-depends:       base   >=4.8   && <4.9,
                        chorebot,
                        directory,
-                       time
+                       time,
+                       random
   default-language:    Haskell2010
 
 test-suite spec

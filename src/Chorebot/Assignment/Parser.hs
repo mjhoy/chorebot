@@ -16,8 +16,6 @@ import Chorebot.Assignment
 import Chorebot.Chore
 import Chorebot.Doer
 
-import Debug.Trace
-
 -- assignment before it has been associated with an actual chore or
 -- doer
 data ProtoAssignment =

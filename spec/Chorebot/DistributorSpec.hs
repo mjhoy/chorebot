@@ -23,7 +23,7 @@ spec = do
         -- first assignment. should assign Hildegard the chore of
         -- baking cookies.
         let (chores', assignments', sc) =
-              mkAssignment prof (chores, [], 0) 100 now
+              mkAssignment (chores, [], 0) prof 100 now
 
         (length chores') `shouldBe` ((length chores) - 1)
         (length assignments') `shouldBe` 1
@@ -33,7 +33,7 @@ spec = do
         -- second assignment should *not* assign Hildegard the chore
         -- of mopping, since it is in her vetoes.
         let (chores'', assignments'', sc') =
-              mkAssignment prof (chores', assignments', sc) 100 now
+              mkAssignment (chores', assignments', sc) prof 100 now
 
         (length chores'') `shouldBe` (length chores')
         (length assignments'') `shouldBe` 1
@@ -43,7 +43,7 @@ spec = do
         -- third assignment should assign mopping, since we are
         -- setting the sanity check limit low.
         let (chores''', assignments''', sc'') =
-              mkAssignment prof (chores'', assignments'', sc') 2 now
+              mkAssignment (chores'', assignments'', sc') prof 2 now
 
         (length chores''') `shouldBe` ((length chores'') - 1)
         (length assignments''') `shouldBe` 2
