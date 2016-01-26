@@ -125,8 +125,8 @@ distribute profiles chores pastAssignments now gen = (finalAssignments, didForce
     -- step 2: distribute permanent chores
     (chores2, assignments1) = distributePerm profiles chores1 []
 
-    -- step 3: sort chores by difficulty, hardest *first*. then take a
-    -- random number seed and randomly sort chores of the same difficulty.
+    -- step 3: sort chores by difficulty, hardest *first*. chores of
+    -- equal difficulty are randomly sorted.
     chores3 =
       let cRandomWeight = zip (randomRs (1, 10000) gen) chores2
           sortFn :: (Int, Chore) -> (Int, Chore) -> Ordering
@@ -137,8 +137,8 @@ distribute profiles chores pastAssignments now gen = (finalAssignments, didForce
 
     -- step 4: sort the profiles in order of least "difficultyPerDay"
     -- first; i.e., those profiles who have done, on average, the
-    -- least work should get the first assignments. randomize when
-    -- equal values are found.
+    -- least work should get the first assignments. equal values are
+    -- randomly sorted, as with chore difficulty.
     profiles2 =
       let pRandomWeight = zip (randomRs (1, 10000) gen) profiles
           sortFn :: (Int, Profile) -> (Int, Profile) -> Ordering
