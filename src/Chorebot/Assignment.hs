@@ -6,6 +6,9 @@ import Chorebot.Doer
 import Data.Time
 import Data.Time.Format
 import Data.List
+import Data.Maybe (isJust)
+
+import Text.Regex (matchRegex)
 
 data Assignment = Assignment { chore      :: Chore,
                                doer       :: Doer,
@@ -16,6 +19,19 @@ data Assignment = Assignment { chore      :: Chore,
 instance Ord Assignment where
   (Assignment _ _ d _) `compare`
     (Assignment _ _ d' _) = d `compare` d'
+
+assign :: Doer -> UTCTime -> Chore -> Assignment
+assign doer date chore = Assignment chore doer date (difficulty chore)
+
+chkPats :: [Pattern] -> Chore -> Bool
+chkPats pats c = any chkPat pats
+  where chkPat p = isJust $ matchRegex (patToRegex p) (ident c)
+
+isPermanentlyAssigned :: Doer -> Chore -> Bool
+isPermanentlyAssigned d c = chkPats (perm d) c
+
+hasVetoed :: Doer -> Chore -> Bool
+hasVetoed d c = chkPats (vetoes d) c
 
 printAssignments :: [Assignment] -> String
 printAssignments assignments =

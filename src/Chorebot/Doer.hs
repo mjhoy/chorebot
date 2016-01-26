@@ -1,6 +1,7 @@
 module Chorebot.Doer where
 
 import Data.Time
+import Text.Regex (mkRegex, Regex)
 
 newtype Pattern = Pattern { unpattern :: String }
                   deriving (Show, Eq)
@@ -8,9 +9,12 @@ newtype Pattern = Pattern { unpattern :: String }
 data Doer = Doer { name   :: String,
                    email  :: String,
                    vetoes :: [Pattern],
-                   assign :: [Pattern],
+                   perm   :: [Pattern],
                    absent :: [UTCTime]
                  } deriving (Eq, Show)
+
+patToRegex :: Pattern -> Regex
+patToRegex (Pattern str) = mkRegex str
 
 printDoer :: Doer -> String
 printDoer d =

@@ -4,3 +4,4 @@
 
 St. Hildegard <hildegard@test.com>
 Veto: mop*, clean-room,   extra-space
+Assigned: bake-cookies

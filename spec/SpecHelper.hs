@@ -1,10 +1,14 @@
 module SpecHelper
        ( module Test.Hspec
+       , module Chorebot.Time
        , doersFixtureFile
        , fixtureData
        ) where
 
+-- reexported
 import Test.Hspec
+import Chorebot.Time
+-- /reexported
 
 import Chorebot.Doer
 import Chorebot.Chore

@@ -3,7 +3,6 @@ module Chorebot.ProfileSpec where
 import SpecHelper
 
 import Chorebot.Profile
-import Chorebot.Time
 
 spec :: Spec
 spec = do
