@@ -164,17 +164,25 @@ distribute profiles chores pastAssignments now gen = (finalAssignments, didForce
     -- distribute chores
     distributeAll [] _ _ _  = ([], False) -- no profiles
 
-    distributeAll ps c a s = repeatedDist c a s
+    distributeAll ps c a s = repeatedDist c a s False
 
       where
 
         -- repeatedly distribute chores until none remain.
 
-        repeatedDist [] acc sc
+        repeatedDist [] acc sc _
           | sc >= sanityCheckLimit = (acc, True)
           | otherwise = (acc, False)
 
-        repeatedDist cs acc sc = repeatedDist cs' acc' sc'
+        repeatedDist cs acc sc reord = repeatedDist cs' acc' sc' True
           where
-            (!cs', !acc', !sc') = foldl' mkAssignment' (cs, acc, sc) ps
+            (!cs', !acc', !sc') = foldl' mkAssignment' (cs, acc, sc) ps'
             mkAssignment' a b = mkAssignment a b sanityCheckLimit now
+            ps' = case reord of
+              False -> ps
+              True -> map snd $ sortBy fstSort $ zip (map curDifficulty ps) ps
+            fstSort (f1,_) (f2,_) = f1 `compare` f2
+            curDifficulty :: Profile -> Int
+            curDifficulty prof = let d = (pdoer prof)
+                                     as = filter (\a -> (doer a) == d) acc
+                                 in sum (map adiff as)
