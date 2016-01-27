@@ -9,19 +9,45 @@ category:            Shared living
 build-type:          Simple
 cabal-version:       >=1.10
 
+-- while it makes more sense to break out a chorebot library, and add
+-- it as a dependency for both an executable and a test-suite, this
+-- seems to cause trouble with building a static binary which for now
+-- is a requirement. this means build-depends must be duplicated
+-- between the executable and the test-suite.
 
 executable chorebot
   main-is:             Main.hs
   hs-source-dirs:      src
   -- other-modules:       
   -- other-extensions:    
-  build-depends:       base   >=4.8   && <4.9,
-                       parsec >=3.1.9 && <3.2,
-                       directory,
-                       time,
-                       extra,
-                       containers,
-                       regex-compat,
-                       random
+  build-depends:       base   >=4.8   && <4.9
+
+                       -- chorebot dependencies
+                     , parsec >=3.1.9 && <3.2
+                     , directory
+                     , time
+                     , extra
+                     , containers
+                     , regex-compat
+                     , random
+
   default-language:    Haskell2010
 
+test-suite spec
+  main-is:             Spec.hs
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      spec, src
+  other-modules:       Paths_chorebot
+  build-depends:       base   >=4.8   && <4.9
+
+                       -- test dependencies
+                     , hspec
+
+                       -- chorebot dependencies
+                     , parsec >=3.1.9 && <3.2
+                     , directory
+                     , time
+                     , extra
+                     , containers
+                     , regex-compat
+                     , random
