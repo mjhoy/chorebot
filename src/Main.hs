@@ -14,8 +14,12 @@ import Chorebot.Assignment
 import Chorebot.Assignment.Parser
 import Chorebot.Profile
 import Chorebot.Distributor
+import Chorebot.Tribunal
+import Chorebot.Time
 
 import Data.Time
+import Data.Maybe
+import Data.List
 
 -- helper function
 putErr :: String -> IO ()
@@ -81,13 +85,31 @@ main = do
       mapM_ (putStrLn . (printProfile t)) profiles
     ("distribute":_) -> do
       t <- getCurrentTime
+      -- for debugging: (todo: make a command line option)
+      -- let t = fromJust $ cbParseDate "2016/02/01"
       gen <- getStdGen
-      let (newAssignments, didForce) = distribute profiles chores assignments t gen
+
+      -- generate 100 rounds of possible chore assignments.
+      let nIter = 100
+          (possibleAssignments, didForce, gen') = foldl' iterDist ([],False,gen) (take nIter $ repeat ())
+          iterDist (acc, didForce, g) _ =
+            let (newAssignments, didForce', g') = distribute profiles chores assignments t g
+            in (newAssignments:acc, didForce || didForce', g')
+
       case didForce of
+
         True -> do
-          putStrLn "WARNING: sanity check flag flipped"
-          putStr $ printAssignments newAssignments
-        False -> putStr $ printAssignments newAssignments
+          putErr "ERROR: sanity check flag flipped"
+
+        False -> do
+
+          let newAssignments = snd . head $ rankedPossibilities
+              rankedPossibilities = zip (map (rank profiles) possibleAssignments) possibleAssignments
+              ((fstRank, fstAssignments):rest) =
+                sortBy (\(r1,_) (r2,_) -> r1 `compare` r2) rankedPossibilities
+          -- debugging:
+          -- putStr $ "total ranking: " ++ (show fstRank)
+          putStr $ printAssignments fstAssignments
     _ -> do
       putErr "unknown action (use --help for more information)"
       exitFailure

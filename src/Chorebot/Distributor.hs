@@ -74,23 +74,26 @@ mkAssignment (c, a, s) p limit n = mkAssignment' (c, a, s) p n []
 -- precluded one chore or another from being assigned)
 distribute :: RandomGen g =>
 
-              [Profile] ->         -- list of profiles to assign
-                                   -- chores to
+              -- list of profiles to assign chores to
+              [Profile] ->
 
-              [Chore] ->           -- list of possible chores to
-                                   -- assign
+              -- list of possible chores to assign
+              [Chore] ->
 
-              [Assignment] ->      -- list of past chore assignments
+              -- list of past chore assignments
+              [Assignment] ->
 
-              UTCTime ->           -- current time
+              -- current time
+              UTCTime ->
 
-              g ->                 -- random number generator
+              -- random number generator
+              g ->
 
-              ([Assignment], Bool) -- a list of new assignments plus
-                                   -- whether any chores were force
-                                   -- assigned
+              -- a list of new assignments plus whether any chores
+              -- were force assigned, plus a new random gen
+              ([Assignment], Bool, g)
 
-distribute profiles chores pastAssignments now gen = (finalAssignments, didForceAssign)
+distribute profiles chores pastAssignments now gen = (finalAssignments, didForceAssign, gen'')
 
   where
 
@@ -125,27 +128,35 @@ distribute profiles chores pastAssignments now gen = (finalAssignments, didForce
     -- step 2: distribute permanent chores
     (chores2, assignments1) = distributePerm profiles chores1 []
 
+    -- helper function: generate n random numbers and return the list
+    -- and the new random generator
+    randoms n g = foldl' fn ([], g) (take n $ repeat ())
+      where fn (acc,g') _ = let (a, g'') = randomR (1,10000) g'
+                            in (a:acc, g'')
+
     -- step 3: sort chores by difficulty, hardest *first*. chores of
     -- equal difficulty are randomly sorted.
-    chores3 =
-      let cRandomWeight = zip (randomRs (1, 10000) gen) chores2
+    (chores3, gen') =
+      let (rs, lgen') = randoms (length chores2) gen
+          cRandomWeight = zip rs chores2
           sortFn :: (Int, Chore) -> (Int, Chore) -> Ordering
           sortFn (r1, c1) (r2, c2) = case difficulty c1 `compare` difficulty c2 of
             EQ -> r1 `compare` r2
             a  -> a
-          in map snd $ reverse $ sortBy sortFn cRandomWeight
+          in ((map snd $ reverse $ sortBy sortFn cRandomWeight), lgen')
 
     -- step 4: sort the profiles in order of least "difficultyPerDay"
     -- first; i.e., those profiles who have done, on average, the
     -- least work should get the first assignments. equal values are
     -- randomly sorted, as with chore difficulty.
-    profiles2 =
-      let pRandomWeight = zip (randomRs (1, 10000) gen) profiles
+    (profiles2, gen'') =
+      let (rs, lgen'') = randoms (length profiles) gen'
+          pRandomWeight = zip rs profiles
           sortFn :: (Int, Profile) -> (Int, Profile) -> Ordering
           sortFn (r1, p1) (r2, p2) = case difficultyPerDay now p1 `compare` difficultyPerDay now p2 of
             EQ -> r1 `compare` r2
             a -> a
-      in map snd $ sortBy sortFn pRandomWeight
+      in ((map snd $ sortBy sortFn pRandomWeight), lgen'')
 
     -- step 5: distribute the rest of the chores
     (assignments3, didForceAssign) = distributeAll profiles2 chores3 assignments1 0
