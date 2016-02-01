@@ -90,9 +90,11 @@ main = do
                            ( fullDesc
                            <> progDesc "chorebot"
                            <> header "chorebot -- blah blah"))
-  t <- t'
+  t <- t' -- run the date IO action
+
   case c of
-    ("--help") ->
+
+    "--help" ->
       putErr $ "usage: chorebot COMMAND\n\n" ++
                "commands:\n" ++
                "  list-chores              List current chores\n" ++
@@ -100,19 +102,22 @@ main = do
                "  list-assignment-history  List past chore assignments\n" ++
                "  list-profiles            List profile info\n" ++
                "  distribute               Make new chore assignments"
-    ("list-chores") ->
+
+    "list-chores" ->
       mapM_ (putStrLn . printChore) chores
-    ("list-doers") ->
+
+    "list-doers" ->
       mapM_ (putStrLn . printDoer) doers
-    ("list-assignment-history") ->
+
+    "list-assignment-history" ->
       putStr $ printAssignments assignments
-    ("list-profiles") -> do
+
+    "list-profiles" -> do
       putStrLn "name         diff/day  prev chores"
       putStrLn "----------------------------------"
       mapM_ (putStrLn . (printProfile t)) profiles
-    ("distribute") -> do
-      -- for debugging: (todo: make a command line option)
-      -- let t = fromJust $ cbParseDate "2016/02/01"
+
+    "distribute" -> do
       gen <- getStdGen
 
       -- generate 100 rounds of possible chore assignments.
@@ -135,6 +140,7 @@ main = do
           -- debugging:
           -- putStr $ "total ranking: " ++ (show fstRank)
           putStr $ printAssignments fstAssignments
+
     _ -> do
       putErr "unknown action (use --help for more information)"
       exitFailure
