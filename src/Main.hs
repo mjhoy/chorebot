@@ -5,6 +5,11 @@ import System.IO
 import System.Exit
 import System.Directory
 import System.Random
+import Control.Monad
+import Data.Maybe
+import Data.Time
+import Data.List
+import Options.Applicative
 
 import Chorebot.Chore
 import Chorebot.Chore.Parser
@@ -17,12 +22,32 @@ import Chorebot.Distributor
 import Chorebot.Tribunal
 import Chorebot.Time
 
-import Data.Time
-import Data.List
-
 -- helper function
 putErr :: String -> IO ()
 putErr str = hPutStrLn stderr str
+
+-- data structure to hold the options passed to the `chorebot`
+-- command.
+data Cmd = Cmd { _date :: IO UTCTime
+               , _command :: String }
+
+-- parse dates
+datep :: ReadM UTCTime
+datep = eitherReader $ \arg -> case (cbParseDate arg) of
+  Just t -> return t
+  Nothing -> Left $ "cannot parse date `" ++ arg ++ "`; must be in YYYY/MM/DD format"
+
+cmd :: Parser Cmd
+cmd = Cmd
+  <$> (option (liftA return datep)
+       (long "date"
+        <> short 'd'
+        <> metavar "DATE"
+        <> help ("If provided, Chorebot acts as if DATE were " ++
+                 "the current date. Format as YYYY/MM/DD.")
+        <> value getCurrentTime))
+  <*> argument str ( metavar "COMMAND"
+                     <> help "The command to run" )
 
 main :: IO ()
 main = do
@@ -61,9 +86,13 @@ main = do
 
   let profiles = map (buildProfile assignments) doers
 
-  args <- getArgs
-  case args of
-    ("--help":_) ->
+  (Cmd t' c) <- execParser (info (helper <*> cmd)
+                           ( fullDesc
+                           <> progDesc "chorebot"
+                           <> header "chorebot -- blah blah"))
+  t <- t'
+  case c of
+    ("--help") ->
       putErr $ "usage: chorebot COMMAND\n\n" ++
                "commands:\n" ++
                "  list-chores              List current chores\n" ++
@@ -71,19 +100,17 @@ main = do
                "  list-assignment-history  List past chore assignments\n" ++
                "  list-profiles            List profile info\n" ++
                "  distribute               Make new chore assignments"
-    ("list-chores":_) ->
+    ("list-chores") ->
       mapM_ (putStrLn . printChore) chores
-    ("list-doers":_) ->
+    ("list-doers") ->
       mapM_ (putStrLn . printDoer) doers
-    ("list-assignment-history":_) ->
+    ("list-assignment-history") ->
       putStr $ printAssignments assignments
-    ("list-profiles":_) -> do
+    ("list-profiles") -> do
       putStrLn "name         diff/day  prev chores"
       putStrLn "----------------------------------"
-      t <- getCurrentTime
       mapM_ (putStrLn . (printProfile t)) profiles
-    ("distribute":_) -> do
-      t <- getCurrentTime
+    ("distribute") -> do
       -- for debugging: (todo: make a command line option)
       -- let t = fromJust $ cbParseDate "2016/02/01"
       gen <- getStdGen
