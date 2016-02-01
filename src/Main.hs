@@ -18,7 +18,6 @@ import Chorebot.Tribunal
 import Chorebot.Time
 
 import Data.Time
-import Data.Maybe
 import Data.List
 
 -- helper function
@@ -54,7 +53,7 @@ main = do
       True -> do
         assignmenttxt <- readFile assignmentfn
         case runAssignmentParser chores doers assignmentfn assignmenttxt of
-          Right assignments -> return assignments
+          Right assignments' -> return assignments'
           Left err -> do
             putErr err
             exitFailure
@@ -92,9 +91,9 @@ main = do
       -- generate 100 rounds of possible chore assignments.
       let nIter = 100
           (possibleAssignments, didForce, gen') = foldl' iterDist ([],False,gen) (take nIter $ repeat ())
-          iterDist (acc, didForce, g) _ =
-            let (newAssignments, didForce', g') = distribute profiles chores assignments t g
-            in (newAssignments:acc, didForce || didForce', g')
+          iterDist (acc, dF, g) _ =
+            let (newAssignments, dF', g') = distribute profiles chores assignments t g
+            in (newAssignments:acc, dF || dF', g')
 
       case didForce of
 
@@ -103,8 +102,7 @@ main = do
 
         False -> do
 
-          let newAssignments = snd . head $ rankedPossibilities
-              rankedPossibilities = zip (map (rank profiles) possibleAssignments) possibleAssignments
+          let rankedPossibilities = zip (map (rank profiles) possibleAssignments) possibleAssignments
               ((fstRank, fstAssignments):rest) =
                 sortBy (\(r1,_) (r2,_) -> r1 `compare` r2) rankedPossibilities
           -- debugging:

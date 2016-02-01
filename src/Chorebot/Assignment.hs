@@ -4,7 +4,6 @@ import Chorebot.Chore
 import Chorebot.Doer
 
 import Data.Time
-import Data.Time.Format
 import Data.List
 import Data.Maybe (isJust)
 
@@ -44,6 +43,7 @@ printAssignments assignments =
         prcd _ = []
         datelines = concatMap prcd grouped''
         printAssignmentsUser :: [Assignment] -> String
+        printAssignmentsUser [] = ""
         printAssignmentsUser (x:xs) = (name d) ++ " <" ++ (email d) ++ ">: " ++ "\n" ++ (concatMap printAssignment (x:xs)) ++ "\n"
           where d = doer x
         printAssignment a =

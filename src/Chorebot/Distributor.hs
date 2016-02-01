@@ -18,10 +18,10 @@ assignPermanentChores :: ([Chore],[Assignment]) -> -- chores to assign, current 
                          UTCTime ->                -- current date
                          ([Chore],[Assignment])    -- remaining chores, assignments + permanent assignments
 assignPermanentChores ([],  assignments) _     _ = ([], assignments)
-assignPermanentChores (rem, assignments) []    _ = (rem, assignments)
-assignPermanentChores (rem, assignments) doers t = (rem', assignments')
+assignPermanentChores (rm,  assignments) []    _ = (rm, assignments)
+assignPermanentChores (rm,  assignments) doers t = (rm', assignments')
   where
-    (rem', assignments') = foldl' assignPermForDoer (rem, assignments) doers
+    (rm', assignments') = foldl' assignPermForDoer (rm, assignments) doers
     assignPermForDoer ([], as) _ = ([], as)
     assignPermForDoer (cs, as) d =  (cs \\ assignedChores,
                                     as ++ (map (assign d t) assignedChores))
@@ -130,14 +130,14 @@ distribute profiles chores pastAssignments now gen = (finalAssignments, didForce
 
     -- helper function: generate n random numbers and return the list
     -- and the new random generator
-    randoms n g = foldl' fn ([], g) (take n $ repeat ())
+    randomNRs n g = foldl' fn ([], g) (take n $ repeat ())
       where fn (acc,g') _ = let (a, g'') = randomR (1,10000) g'
                             in (a:acc, g'')
 
     -- step 3: sort chores by difficulty, hardest *first*. chores of
     -- equal difficulty are randomly sorted.
     (chores3, gen') =
-      let (rs, lgen') = randoms (length chores2) gen
+      let (rs, lgen') = randomNRs (length chores2) gen
           cRandomWeight = zip rs chores2
           sortFn :: (Int, Chore) -> (Int, Chore) -> Ordering
           sortFn (r1, c1) (r2, c2) = case difficulty c1 `compare` difficulty c2 of
@@ -150,7 +150,7 @@ distribute profiles chores pastAssignments now gen = (finalAssignments, didForce
     -- least work should get the first assignments. equal values are
     -- randomly sorted, as with chore difficulty.
     (profiles2, gen'') =
-      let (rs, lgen'') = randoms (length profiles) gen'
+      let (rs, lgen'') = randomNRs (length profiles) gen'
           pRandomWeight = zip rs profiles
           sortFn :: (Int, Profile) -> (Int, Profile) -> Ordering
           sortFn (r1, p1) (r2, p2) = case difficultyPerDay now p1 `compare` difficultyPerDay now p2 of
@@ -188,12 +188,12 @@ distribute profiles chores pastAssignments now gen = (finalAssignments, didForce
         repeatedDist cs acc sc reord = repeatedDist cs' acc' sc' True
           where
             (!cs', !acc', !sc') = foldl' mkAssignment' (cs, acc, sc) ps'
-            mkAssignment' a b = mkAssignment a b sanityCheckLimit now
+            mkAssignment' x y = mkAssignment x y sanityCheckLimit now
             ps' = case reord of
               False -> ps
               True -> map snd $ sortBy fstSort $ zip (map curDifficulty ps) ps
             fstSort (f1,_) (f2,_) = f1 `compare` f2
             curDifficulty :: Profile -> Int
             curDifficulty prof = let d = (pdoer prof)
-                                     as = filter (\a -> (doer a) == d) acc
+                                     as = filter (\a' -> (doer a') == d) acc
                                  in sum (map adiff as)
