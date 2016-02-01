@@ -121,7 +121,7 @@ main = do
       gen <- getStdGen
 
       -- generate 100 rounds of possible chore assignments.
-      let nIter = 100
+      let nIter = 1000
           (possibleAssignments, didForce, gen') = foldl' iterDist ([],False,gen) (take nIter $ repeat ())
           iterDist (acc, dF, g) _ =
             let (newAssignments, dF', g') = distribute profiles chores assignments t g
