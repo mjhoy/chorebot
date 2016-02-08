@@ -28,6 +28,11 @@ choreParser = do
     spaces'
     _intervalStr <- many1 digit
     skipMany1 space'
+    _count <- option 1 $ do
+      d <- many1 digit
+      _ <- char 'x'
+      skipMany1 space'
+      return $ (read d :: Int)
     _difficulty <- difficultyParser
     spaces'
     _ <- newline
@@ -35,7 +40,7 @@ choreParser = do
     _ <- newline
     _desc <- (newline >> return "")
          <|> manyTill anyChar (try (blankSpace <|> eofAndSpaces))
-    return $ Chore _title _ident _desc (read _intervalStr) _difficulty
+    return $ Chore _title _ident _desc (read _intervalStr) _difficulty _count
   where
     blankSpace = string "\n\n" >> return ()
     eofAndSpaces = skipMany space >> eof

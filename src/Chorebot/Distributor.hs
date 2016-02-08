@@ -31,11 +31,13 @@ assignPermanentChores (rm,  assignments) doers t = (rm', assignments')
                            then c:acc
                            else acc
 
+type AssignmentState = ([(Chore, Int)], -- remaining chores to assign,
+                        [Assignment],   -- current assignments,
+                        Int)            -- current sanity check
+
 -- Given a list of chores, current assignments, a profile (with past
 -- assignments), the time, a sanity check counter, make an assignment!
-mkAssignment :: ([Chore], [Assignment], Int) -> -- remaining chores to assign,
-                                                -- current assignments,
-                                                -- current sanity check
+mkAssignment :: AssignmentState ->
 
                 Profile ->                      -- profile to assign to
 
@@ -43,15 +45,15 @@ mkAssignment :: ([Chore], [Assignment], Int) -> -- remaining chores to assign,
 
                 UTCTime ->                      -- current time
 
-                ([Chore], [Assignment], Int)    -- remaining chores after this assignment,
-                                                -- current assignments plus this assignment,
-                                                -- sanity check incremented by 1
+                AssignmentState
+
 mkAssignment (c, a, s) p limit n = mkAssignment' (c, a, s) p n []
   where
+    mkAssignment' :: AssignmentState -> Profile -> UTCTime -> [(Chore, Int)] -> AssignmentState
     mkAssignment' ([], assignments, sc) _ _ acc = (acc, assignments, sc + 1)
-    mkAssignment' (chore:cs, assignments, sc) prof t acc =
-      let doer = pdoer prof
-          newAssignment = assign doer t chore
+    mkAssignment' ((ch, cn):cs, assignments, sc) prof t acc =
+      let doer' = pdoer prof
+          newAssignment = assign doer' t ch
 
           -- logic about making an assignment for a particular chore.
           -- either the sanity check limit is reached (and the chore
@@ -60,13 +62,16 @@ mkAssignment (c, a, s) p limit n = mkAssignment' (c, a, s) p n []
           -- past assignments
           shouldAssign = or [
             sc >= limit,
-            (and [ (not $ hasVetoed doer chore),
-                   (not $ elem chore $ latestChores prof) ])
+            (and [ (not $ hasVetoed doer' ch),
+                   (not $ elem ch $ map chore (filter ((== (pdoer prof)) . doer) assignments)),
+                   (not $ elem ch $ latestChores prof) ])
             ]
 
       in if shouldAssign
-         then (acc ++ cs, newAssignment:assignments, sc + 1)
-         else mkAssignment' (cs, assignments, sc) prof t (chore:acc)
+         then if cn <= 1
+              then (acc ++ cs, newAssignment:assignments, sc + 1)
+              else (acc ++ [(ch, cn - 1)] ++ cs, newAssignment:assignments, sc + 1)
+         else mkAssignment' (cs, assignments, sc) prof t ((ch, cn):acc)
 
 -- distribute the chores! returns a list of new assignments plus a
 -- flag about whether we reached the "sanity check" limit, meaning
@@ -158,8 +163,11 @@ distribute profiles chores pastAssignments now gen = (finalAssignments, didForce
             a -> a
       in ((map snd $ sortBy sortFn pRandomWeight), lgen'')
 
+    -- chores3' is chores associated with their counts
+    chores3' = map (\c -> (c, count c)) chores3
+
     -- step 5: distribute the rest of the chores
-    (assignments3, didForceAssign) = distributeAll profiles2 chores3 assignments1 0
+    (assignments3, didForceAssign) = distributeAll profiles2 chores3' assignments1 0
 
     finalAssignments = assignments3
 
