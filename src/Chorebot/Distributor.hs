@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Chorebot.Distributor where
 
@@ -6,202 +7,267 @@ import Data.Time
 import Data.List
 
 import System.Random
+import Control.Monad.Random
+import Control.Monad.State
+import Control.Monad.Identity
+import Control.Monad.Reader
+import Control.Monad.Extra
+import Data.Maybe
 
 import Chorebot.Doer
 import Chorebot.Chore
 import Chorebot.Assignment
 import Chorebot.Profile
 
--- Calculate permanent assignments.
-assignPermanentChores :: ([Chore],[Assignment]) -> -- chores to assign, current assignments
-                         [Doer] ->                 -- doers to assign to
-                         UTCTime ->                -- current date
-                         ([Chore],[Assignment])    -- remaining chores, assignments + permanent assignments
-assignPermanentChores ([],  assignments) _     _ = ([], assignments)
-assignPermanentChores (rm,  assignments) []    _ = (rm, assignments)
-assignPermanentChores (rm,  assignments) doers t = (rm', assignments')
+import Debug.Trace
+
+data PendingChore = PendingChore { _pendingChore :: Chore
+                                 , _assignedCount :: Int
+                                 } deriving (Eq)
+
+mkPending :: Chore -> PendingChore
+mkPending chore = PendingChore chore (count chore)
+
+decPending :: PendingChore -> Maybe PendingChore
+decPending p | ac > 1 = Just (p { _assignedCount = ac - 1 })
+             | otherwise = Nothing
+  where ac = _assignedCount p
+
+-- The state for our algorithm, which will be updated in
+-- iterations. As chores are assigned, pending chores move from the
+-- pending chores list into the new assignments list. In addition a
+-- sanity check counter is incremented, in cases where chores are not
+-- able to be assigned and we would loop forever.
+data CState = CState
+              { pendingChores :: [PendingChore]
+              , newAssignments :: [Assignment]
+              , sanityCheck :: Int
+              }
+
+-- Read-only configuration for the algorithm.
+data CConf = CConf
+             { time :: UTCTime
+             , pastAssignments :: [Assignment]
+             , profiles :: [Profile]
+             , sanityCheckLimit :: Int
+             }
+
+-- Helper function to create the config. Make sure that the list of
+-- assignments is sorted to begin with.
+mkCConf :: UTCTime -> [Assignment] -> [Profile] -> Int -> CConf
+mkCConf t a p sc = CConf t a' p sc
+  where a' = let cmpDates a1 a2 = date a1 `compare` date a2
+             in reverse $ sortBy cmpDates a
+
+-- Our chore assignment monad. We want to capture state (the current
+-- pending chores to assign and the assignments made so far),
+-- read-only configuration (a list of profiles, the current time, a
+-- limit of # of iterations, etc), and a random number generator that
+-- introduces some randomness into sorting.
+newtype C a = C { _runC :: RandT StdGen (ReaderT CConf (State CState)) a }
+            deriving (Functor, Applicative, Monad,
+                      MonadState CState,
+                      MonadReader CConf,
+                      MonadRandom)
+
+-- Run the C monad. Given an initial config, random generator, and
+-- state, run an action and return the result along with the new
+-- generator and updated state. Used to run the overall action, which
+-- is distribute'.
+runC :: C a -> CConf -> CState -> StdGen -> ((a, StdGen), CState)
+runC (C k) conf st gen = runIdentity (runStateT (runReaderT (runRandT k gen) conf) st)
+
+
+-- Public-facing function. Delegate to the C monad to actually run the
+-- algorithm. Set up our initial reader config and state.
+distribute :: [Profile] -> [Chore] -> [Assignment] -> UTCTime -> StdGen -> ([Assignment], Bool, StdGen)
+distribute profiles chores assignments now gen =
+  let (((as, hitSc), gen'), _) = runC distribute' conf st gen
+  in (as, hitSc, gen')
   where
-    (rm', assignments') = foldl' assignPermForDoer (rm, assignments) doers
-    assignPermForDoer ([], as) _ = ([], as)
-    assignPermForDoer (cs, as) d =  (cs \\ assignedChores,
-                                    as ++ (map (assign d t) assignedChores))
-      where
-        assignedChores   = foldl' assignPerm [] cs
-        assignPerm acc c = if isPermanentlyAssigned d c
-                           then c:acc
-                           else acc
+    st = CState { pendingChores = map mkPending chores
+                , newAssignments = []
+                , sanityCheck = 0 }
+    conf = mkCConf now assignments profiles sclimit
+    sclimit = (length chores) * (length profiles) + 50
 
-type AssignmentState = ([(Chore, Int)], -- remaining chores to assign,
-                        [Assignment],   -- current assignments,
-                        Int)            -- current sanity check
+-- The distribution algorithm.
+distribute' :: C ([Assignment], Bool)
+distribute' = do
+  removeUneccessaryChores -- step 1
+  distributePerm          -- step 2
+  sortChores              -- step 3
+  hitLim <- distributeAll -- step 4
+  st <- get
+  return (newAssignments st, hitLim)
 
--- Given a list of chores, current assignments, a profile (with past
--- assignments), the time, a sanity check counter, make an assignment!
-mkAssignment :: AssignmentState ->
+-- reader helpers
+askTime             :: C UTCTime
+askProfiles         :: C [Profile]
+askPastAssignments  :: C [Assignment]
+askSanityCheckLimit :: C Int
 
-                Profile ->                      -- profile to assign to
+askTime = liftM time ask
+askProfiles = liftM profiles ask
+askPastAssignments = liftM pastAssignments ask
+askSanityCheckLimit = liftM sanityCheckLimit ask
 
-                Int ->                          -- sanity check limit
+-- Step 1: Remove chores that have been assigned within the required
+-- chore interval.
+removeUneccessaryChores :: C ()
+removeUneccessaryChores = do
+  st <- get
+  t <- askTime
+  c' <- filterM choreNeedsAssignment (pendingChores st)
+  let st' = st { pendingChores = c' }
+  put st'
+  return ()
 
-                UTCTime ->                      -- current time
+choreNeedsAssignment :: PendingChore -> C Bool
+choreNeedsAssignment (PendingChore c _) = do
+  now <- askTime
+  past <- askPastAssignments
+  let prevAssignment = find (\a' -> c == (chore a')) past
+  case prevAssignment of
+    -- a' is the previous assignment of chore c.
+    --
+    -- calculate whether the time since last defined is greater
+    -- than the interval.
+    Just a' -> let diff = diffUTCTime now (date a')
+                   secInDay = 24 * 60 * 60
+                   intervalSeconds = fromIntegral $ (7 * interval c) * secInDay
+               in return $ diff >= intervalSeconds
+    Nothing -> return True
 
-                AssignmentState
+assignPending :: Profile -> PendingChore -> C ()
+assignPending prof pending = do
+  st <- get
+  now <- askTime
+  let doer' = pdoer prof
+      c = _pendingChore pending
+      assignments' = assign doer' now c : (newAssignments st)
+      chores' = mapMaybe (ifEqDecPending pending) (pendingChores st)
 
-mkAssignment (c, a, s) p limit n = mkAssignment' (c, a, s) p n []
+  put $ st { pendingChores = chores'
+           , newAssignments = assignments' }
+    where
+      ifEqDecPending p1 p2 | p1 == p2 = decPending p2
+                           | otherwise = Just p2
+
+-- Step 2: distribute permanent chores.
+distributePerm :: C ()
+distributePerm = do
+  profiles <- liftM profiles ask
+  now <- askTime
+
+  forM_ profiles $ \p -> do
+    -- check the current pending chores that are permanently assigned
+    -- to `p`.
+    let doer' = pdoer p
+    cs <- liftM pendingChores get
+    let toAssign = filter (\pc -> doer' `isPermanentlyAssigned` (_pendingChore pc)) cs
+    mapM_ (assignPending p) toAssign
+
+  return ()
+
+-- Helper to generate a sequence of random integers (using an
+-- arbitrary, "good enough" domain).
+randomSequence :: Int -> C [Int]
+randomSequence n = sequence $ replicate n $ getRandomR (1,10000)
+
+-- Given a list of a's, and a function Ord b => a -> b that can order
+-- those a's, return an ordered list of as that is randomly ordered
+-- where two a's would be compared equally. We use this to both sort
+-- and "mix up" profiles and chores.
+randomishSort :: Ord b => [a] -> (a -> b) -> C [a]
+randomishSort as fn = do
+    rs <- randomSequence (length as)
+    let asRweighted = zip rs as
+    return $ map snd $ sortBy rsortfn asRweighted
   where
-    mkAssignment' :: AssignmentState -> Profile -> UTCTime -> [(Chore, Int)] -> AssignmentState
-    mkAssignment' ([], assignments, sc) _ _ acc = (acc, assignments, sc + 1)
-    mkAssignment' ((ch, cn):cs, assignments, sc) prof t acc =
-      let doer' = pdoer prof
-          newAssignment = assign doer' t ch
+    rsortfn (r1, a1) (r2, a2) = case (fn a1) `compare` (fn a2) of
+      EQ -> r1 `compare` r2
+      a -> a
 
-          -- logic about making an assignment for a particular chore.
-          -- either the sanity check limit is reached (and the chore
-          -- is assigned no matter what), or the chore: 1. is not in
-          -- doer's vetoes, and, 2. is not in the doer's most recent
-          -- past assignments
-          shouldAssign = or [
-            sc >= limit,
-            (and [ (not $ hasVetoed doer' ch),
-                   (not $ elem ch $ map chore (filter ((== (pdoer prof)) . doer) assignments)),
-                   (not $ elem ch $ latestChores prof) ])
-            ]
+-- Step 3: Sort the pending chores by difficulty, hardest are
+-- first. Chores of equal difficulty are randomly sorted.
+sortChores :: C ()
+sortChores = do
+    st <- get
+    let chores = pendingChores st
+    chores' <- randomishSort chores (difficulty . _pendingChore)
+    put $ st { pendingChores = chores' }
 
-      in if shouldAssign
-         then if cn <= 1
-              then (acc ++ cs, newAssignment:assignments, sc + 1)
-              else (acc ++ [(ch, cn - 1)] ++ cs, newAssignment:assignments, sc + 1)
-         else mkAssignment' (cs, assignments, sc) prof t ((ch, cn):acc)
+-- Step 4: Distribute the remaining pending chores. Returns whether we
+-- hit the sanity check limit or not.
+distributeAll :: C Bool
+distributeAll = do
+    now <- askTime
+    profiles <- askProfiles
 
--- distribute the chores! returns a list of new assignments plus a
--- flag about whether we reached the "sanity check" limit, meaning
--- that chores had to be forced assigned (possibility: vetoes
--- precluded one chore or another from being assigned)
-distribute :: RandomGen g =>
+    -- Sort the profiles by difficultyPerDay, with a random weight for
+    -- equal profiles.
+    sortedProfiles <- randomishSort profiles (difficultyPerDay now)
 
-              -- list of profiles to assign chores to
-              [Profile] ->
+    lim <- askSanityCheckLimit
 
-              -- list of possible chores to assign
-              [Chore] ->
+    let checkIter :: C Bool
+        checkIter = do
+          st <- get
+          let chores = pendingChores st
+              sc = sanityCheck st
+          if sc > lim || (length chores == 0)
+            then return False
+            else return True
 
-              -- list of past chore assignments
-              [Assignment] ->
+    whileM $ do
+      mapM_ distributeOne sortedProfiles
+      checkIter
 
-              -- current time
-              UTCTime ->
+    st <- get
+    let hitSanityCheck = if (sanityCheck st) > lim
+                         then True
+                         else False
 
-              -- random number generator
-              g ->
+    return hitSanityCheck
 
-              -- a list of new assignments plus whether any chores
-              -- were force assigned, plus a new random gen
-              ([Assignment], Bool, g)
+-- Take one pending chore and make a new assignment. Either remove the
+-- chore from the pending chores list or decrease its count by 1 if
+-- greater than 1. it is possible no chore assignment is
+-- made. increase the sanity check counter by 1.
+distributeOne :: Profile -> C ()
+distributeOne profile = do
+  lim <- askSanityCheckLimit
+  now <- askTime
+  st <- get
+  let chores = pendingChores st
+      assignments = newAssignments st
+      doer' = pdoer profile
+      sc = sanityCheck st
+      shouldAssign pending =
+        let c = _pendingChore pending
+        in or [ sc >= lim, -- force assignment if sanity check is above limit.
+                not $ or [ (hasVetoed doer' c),
+                           (elem c $ map chore (filter ((== (pdoer profile)) . doer) assignments)),
+                           (elem c $ latestChores profile)
+                         ]
+              ]
+      -- assign the first chore of `pendingChores' that makes sense to the
+      -- doer.
+      newChoreToAssign = find shouldAssign chores
 
-distribute profiles chores pastAssignments now gen = (finalAssignments, didForceAssign, gen'')
+  case newChoreToAssign of
+    -- we should assign `c` to `profile`
+    Just pending -> assignPending profile pending
 
-  where
+    -- chore could not be assigned, noop
+    Nothing -> return ()
 
-    -- step 1: remove chores that have been assigned within the
-    -- required chore interval
-    chores1 = filter choreNeedsAssignment chores
+  incSc -- ensure sanity check counter is increased
+  return ()
 
-    -- sort the past assignments most recent first
-    sortedPastAssignments =
-      let cmpDates a1 a2 = date a1 `compare` date a2
-      in reverse $ sortBy cmpDates pastAssignments
-
-    -- determine whether a chore needs to be done
-    choreNeedsAssignment :: Chore -> Bool
-    choreNeedsAssignment c =
-      let prevAssignment = find (\a' -> c == (chore a')) sortedPastAssignments
-      in case prevAssignment of
-
-        -- a' is the previous assignment of chore c.
-        --
-        -- calculate whether the time since last defined is greater
-        -- than the interval.
-        Just a' -> let diff = diffUTCTime now (date a')
-                       secInDay = 24 * 60 * 60
-                       intervalSeconds = fromIntegral $ (7 * interval c) * secInDay
-                   in diff >= intervalSeconds
-
-        -- chore c has never been assigned before, so we should
-        -- definitely assign it.
-        Nothing -> True
-
-    -- step 2: distribute permanent chores
-    (chores2, assignments1) = distributePerm profiles chores1 []
-
-    -- helper function: generate n random numbers and return the list
-    -- and the new random generator
-    randomNRs n g = foldl' fn ([], g) (take n $ repeat ())
-      where fn (acc,g') _ = let (a, g'') = randomR (1,10000) g'
-                            in (a:acc, g'')
-
-    -- step 3: sort chores by difficulty, hardest *first*. chores of
-    -- equal difficulty are randomly sorted.
-    (chores3, gen') =
-      let (rs, lgen') = randomNRs (length chores2) gen
-          cRandomWeight = zip rs chores2
-          sortFn :: (Int, Chore) -> (Int, Chore) -> Ordering
-          sortFn (r1, c1) (r2, c2) = case difficulty c1 `compare` difficulty c2 of
-            EQ -> r1 `compare` r2
-            a  -> a
-          in ((map snd $ reverse $ sortBy sortFn cRandomWeight), lgen')
-
-    -- step 4: sort the profiles in order of least "difficultyPerDay"
-    -- first; i.e., those profiles who have done, on average, the
-    -- least work should get the first assignments. equal values are
-    -- randomly sorted, as with chore difficulty.
-    (profiles2, gen'') =
-      let (rs, lgen'') = randomNRs (length profiles) gen'
-          pRandomWeight = zip rs profiles
-          sortFn :: (Int, Profile) -> (Int, Profile) -> Ordering
-          sortFn (r1, p1) (r2, p2) = case difficultyPerDay now p1 `compare` difficultyPerDay now p2 of
-            EQ -> r1 `compare` r2
-            a -> a
-      in ((map snd $ sortBy sortFn pRandomWeight), lgen'')
-
-    -- chores3' is chores associated with their counts
-    chores3' = map (\c -> (c, count c)) chores3
-
-    -- step 5: distribute the rest of the chores
-    (assignments3, didForceAssign) = distributeAll profiles2 chores3' assignments1 0
-
-    finalAssignments = assignments3
-
-    -- an upper limit on iteration: don't try to assign chores more
-    -- than `sanityCheckLimit` times
-    sanityCheckLimit = ((length profiles) * (length chores)) + 50
-
-    -- distribute permanent assignments
-    distributePerm ps cs acc =
-      let doers = map pdoer ps
-      in assignPermanentChores (cs, acc) doers now
-
-    -- distribute chores
-    distributeAll [] _ _ _  = ([], False) -- no profiles
-
-    distributeAll ps c a s = repeatedDist c a s False
-
-      where
-
-        -- repeatedly distribute chores until none remain.
-
-        repeatedDist [] acc sc _
-          | sc >= sanityCheckLimit = (acc, True)
-          | otherwise = (acc, False)
-
-        repeatedDist cs acc sc reord = repeatedDist cs' acc' sc' True
-          where
-            (!cs', !acc', !sc') = foldl' mkAssignment' (cs, acc, sc) ps'
-            mkAssignment' x y = mkAssignment x y sanityCheckLimit now
-            ps' = case reord of
-              False -> ps
-              True -> map snd $ sortBy fstSort $ zip (map curDifficulty ps) ps
-            fstSort (f1,_) (f2,_) = f1 `compare` f2
-            curDifficulty :: Profile -> Int
-            curDifficulty prof = let d = (pdoer prof)
-                                     as = filter (\a' -> (doer a') == d) acc
-                                 in sum (map adiff as)
+incSc :: C ()
+incSc = do
+  st <- get
+  let sc = sanityCheck st
+  put $ st { sanityCheck = sc + 1 }
