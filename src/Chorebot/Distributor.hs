@@ -42,6 +42,7 @@ data CState = CState
               { pendingChores :: [PendingChore]
               , newAssignments :: [Assignment]
               , sanityCheck :: Int
+              , permAssignments :: [(Profile, Int)]
               }
 
 -- Read-only configuration for the algorithm.
@@ -87,7 +88,8 @@ distribute profiles chores assignments now gen =
   where
     st = CState { pendingChores = map mkPending chores
                 , newAssignments = []
-                , sanityCheck = 0 }
+                , sanityCheck = 0
+                , permAssignments = [] }
     conf = mkCConf now assignments profiles sclimit
     sclimit = (length chores) * (length profiles) + 50
 
@@ -139,17 +141,31 @@ choreNeedsAssignment (PendingChore c _) = do
                in return $ diff >= intervalSeconds
     Nothing -> return True
 
-assignPending :: Profile -> PendingChore -> C ()
+
+assignPerm :: Profile -> PendingChore -> C ()
+assignPerm prof pending = do
+  _ <- assignPending prof pending
+  st <- get
+  let pa = permAssignments st
+      i' = case lookup prof pa of
+        Just i  -> i + 1
+        Nothing -> 1
+  st <- put $ st { permAssignments = (prof,i'):pa }
+  return ()
+
+assignPending :: Profile -> PendingChore -> C Assignment
 assignPending prof pending = do
   st <- get
   now <- askTime
   let doer' = pdoer prof
       c = _pendingChore pending
-      assignments' = assign doer' now c : (newAssignments st)
+      assignment = assign doer' now c
+      assignments' = assignment : (newAssignments st)
       chores' = mapMaybe (ifEqDecPending pending) (pendingChores st)
 
   put $ st { pendingChores = chores'
            , newAssignments = assignments' }
+  return assignment
     where
       ifEqDecPending p1 p2 | p1 == p2 = decPending p2
                            | otherwise = Just p2
@@ -166,7 +182,7 @@ distributePerm = do
     let doer' = pdoer p
     cs <- liftM pendingChores get
     let toAssign = filter (\pc -> doer' `isPermanentlyAssigned` (_pendingChore pc)) cs
-    mapM_ (assignPending p) toAssign
+    mapM_ (assignPerm p) toAssign
 
   return ()
 
@@ -174,6 +190,12 @@ distributePerm = do
 -- arbitrary, "good enough" domain).
 randomSequence :: Int -> C [Int]
 randomSequence n = sequence $ replicate n $ getRandomR (1,10000)
+
+randomSort :: [a] -> C [a]
+randomSort as = do
+  rs <- randomSequence (length as)
+  let asW = zip rs as
+  return $ map snd $ sortBy (\a b -> fst a `compare` fst b) asW
 
 -- Given a list of a's, and a function Ord b => a -> b that can order
 -- those a's, return an ordered list of as that is randomly ordered
@@ -205,9 +227,8 @@ distributeAll = do
     now <- askTime
     profiles <- askProfiles
 
-    -- Sort the profiles by difficultyPerDay, with a random weight for
-    -- equal profiles.
-    sortedProfiles <- randomishSort profiles (difficultyPerDay now)
+    -- Randomize profiles.
+    sortedProfiles <- randomSort profiles
 
     lim <- askSanityCheckLimit
 
@@ -244,6 +265,7 @@ distributeOne profile = do
       assignments = newAssignments st
       doer' = pdoer profile
       sc = sanityCheck st
+      permAssignmentCount = fromMaybe 0 $ lookup profile (permAssignments st)
       shouldAssign pending =
         let c = _pendingChore pending
         in or [ sc >= lim, -- force assignment if sanity check is above limit.
@@ -256,12 +278,18 @@ distributeOne profile = do
       -- doer.
       newChoreToAssign = find shouldAssign chores
 
-  case newChoreToAssign of
-    -- we should assign `c` to `profile`
-    Just pending -> assignPending profile pending
+  case permAssignmentCount of
+    0 -> do
+      case newChoreToAssign of
+        -- we should assign `c` to `profile`
+        Just pending -> assignPending profile pending >> return ()
 
-    -- chore could not be assigned, noop
-    Nothing -> return ()
+        -- chore could not be assigned, noop
+        Nothing -> return ()
+
+    _ -> do
+      -- skip this round and decrease perm assignment count
+      put $ st { permAssignments = (profile,permAssignmentCount - 1):(permAssignments st) }
 
   incSc -- ensure sanity check counter is increased
   return ()
