@@ -1,6 +1,5 @@
 module Main (main) where
 
-import System.Environment
 import System.IO
 import System.Exit
 import System.Directory
@@ -135,10 +134,10 @@ main = do
         False -> do
 
           let rankedPossibilities = zip (map (rank profiles) possibleAssignments) possibleAssignments
-              ((fstRank, fstAssignments):rest) =
+              ((fstRank, fstAssignments):_rest) =
                 sortBy (\(r1,_) (r2,_) -> r1 `compare` r2) rankedPossibilities
           -- debugging:
-          -- putStr $ "total ranking: " ++ (show fstRank)
+          -- putStrLn $ "total ranking: " ++ (show fstRank)
           putStr $ printAssignments fstAssignments
 
     _ -> do
