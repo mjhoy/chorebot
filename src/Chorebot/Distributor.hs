@@ -197,27 +197,12 @@ randomSort as = do
   let asW = zip rs as
   return $ map snd $ sortBy (\a b -> fst a `compare` fst b) asW
 
--- Given a list of a's, and a function Ord b => a -> b that can order
--- those a's, return an ordered list of as that is randomly ordered
--- where two a's would be compared equally. We use this to both sort
--- and "mix up" profiles and chores.
-randomishSort :: Ord b => [a] -> (a -> b) -> C [a]
-randomishSort as fn = do
-    rs <- randomSequence (length as)
-    let asRweighted = zip rs as
-    return $ map snd $ sortBy rsortfn asRweighted
-  where
-    rsortfn (r1, a1) (r2, a2) = case (fn a1) `compare` (fn a2) of
-      EQ -> r1 `compare` r2
-      a -> a
-
--- Step 3: Sort the pending chores by difficulty, hardest are
--- first. Chores of equal difficulty are randomly sorted.
+-- Step 3: Sort the pending chores randomly.
 sortChores :: C ()
 sortChores = do
     st <- get
     let chores = pendingChores st
-    chores' <- randomishSort chores (difficulty . _pendingChore)
+    chores' <- randomSort chores
     put $ st { pendingChores = chores' }
 
 -- Step 4: Distribute the remaining pending chores. Returns whether we
