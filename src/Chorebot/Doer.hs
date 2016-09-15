@@ -13,6 +13,9 @@ data Doer = Doer { name   :: String,
                    absent :: [UTCTime]
                  } deriving (Eq, Show)
 
+instance Ord Doer where
+  d1 `compare` d2 = (email d1) `compare` (email d2)
+
 patToRegex :: Pattern -> Regex
 patToRegex (Pattern str) = mkRegex str
 

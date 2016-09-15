@@ -22,6 +22,9 @@ data Profile = Profile { pdoer :: Doer,
                          assignments :: [Assignment]
                        } deriving (Eq, Show)
 
+instance Ord Profile where
+  p1 `compare` p2 = (pdoer p1) `compare` (pdoer p2)
+
 buildProfile :: [Assignment] -> -- List of all/any chore assignments
                 Doer ->
                 Profile
