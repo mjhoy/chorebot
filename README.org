@@ -20,7 +20,7 @@ chore assignments which /probably/ fulfill a set of requirements:
 You are reading documentation for setting up and running the Chorebot
 program. You can find the source code on Github here:
 
-[[https://www.github.com/mjhoy/chorebot_hs]]
+[[https://www.github.com/mjhoy/chorebot]]
 
 ** Installing/running
 
