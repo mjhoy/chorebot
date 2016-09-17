@@ -1,6 +1,19 @@
 * Chorebot
 
-A simple bot that divvies up chores and sends out emails.
+Divvy up chores for housemates!
+
+Chorebot is, at its core, a randomized algorithm that outputs a set of
+chore assignments which /probably/ fulfill a set of requirements:
+
+1. Chore difficulty is evenly distributed
+2. Assignment of a particular chore is distributed evenly over time;
+   for instance, a chore shouldn't be assigned to the same person
+   twice in a row
+3. Chores are assigned per a certain interval; for instance, once a
+   week, once a month, etc.
+4. Permanent chores will always be assigned to a specific person.
+5. Chore vetoes prevent a chore from ever being assigned to a specific
+   person.
 
 ** What is this?
 
