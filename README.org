@@ -1,6 +1,27 @@
-* chorebot
+* Chorebot
 
 A simple bot that divvies up chores and sends out emails.
+
+** What is this?
+
+You are reading documentation for setting up and running the Chorebot
+program. You can find the source code on Github here:
+
+[[https://www.github.com/mjhoy/chorebot_hs]]
+
+** Installing/running
+
+WIP! Document how to:
+
+1. Download the source code, set up an environment to compile
+   in (stack), compile Chorebot
+2. Set up all the data files (doers.txt, chores.txt and so on)
+3. Compile a static binary to send up to a shared host running Linux
+4. Define cron tasks for sending out weekly emails
+
+** Contributing
+
+WIP! Write a CONTRIBUTING.md file.
 
 ** Defining chores
 
