@@ -71,3 +71,8 @@ The difficulty is the word "Hard", "Medium" or "Easy". The exact
 calculation may be adjusted, but it should be something like: one hard
 chore is worth slightly less than two medium chores, and one medium
 chore is worth two easy chores.
+
+** License
+
+Chorebot is free, open source software. It is licensed under
+GPL (GNU General Public License) v2. See the [[./LICENSE][LICENSE]] file.
