@@ -33,6 +33,7 @@ executable chorebot
                      , optparse-applicative
                      , MonadRandom
                      , mtl
+                     , pandoc
 
   default-language:    Haskell2010
 
@@ -57,3 +58,4 @@ test-suite spec
                      , optparse-applicative
                      , MonadRandom
                      , mtl
+                     , pandoc

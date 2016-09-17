@@ -10,6 +10,9 @@ import Data.Time
 import Data.List
 import Options.Applicative
 
+import Text.Pandoc
+import Text.Pandoc.Error (handleError)
+
 import Chorebot.Chore
 import Chorebot.Chore.Parser
 import Chorebot.Doer
@@ -115,6 +118,16 @@ main = do
       putStrLn "name         diff/day  prev chores"
       putStrLn "----------------------------------"
       mapM_ (putStrLn . (printProfile t)) profiles
+
+    "generate-doc" -> do
+      readmetxt <- readFile "README.org"
+      let doc = readOrg def readmetxt
+          str = writeHtmlString def (handleError doc)
+          prefix = "<!DOCTYPE html><head><title>Chorebot!</title>" ++
+                   "<style>body { font-family: Helvetica, sans-serif; max-width: 600px; margin: 1em auto; }</style>" ++
+                   "<body>"
+          suffix = "</body></html>"
+      putStrLn (prefix ++ str ++ suffix)
 
     "distribute" -> do
       gen <- getStdGen
