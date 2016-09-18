@@ -1,7 +1,6 @@
 module Chorebot.ParserHelper where
 
 import Text.Parsec
-import Text.Parsec.Error
 import qualified Data.Set as Set
 
 identParser :: Parsec String () String
@@ -13,9 +12,9 @@ identParser = do
 
 emailParser :: Parsec String () String
 emailParser = do
-  char '<' <?> "email opening bracket"
+  _   <- char '<' <?> "email opening bracket"
   ret <- (many1 $ noneOf [ '>' ]) <?> "email address"
-  char '>' <?> "email closing bracket"
+  _   <- char '>' <?> "email closing bracket"
   return ret <?> "email address"
 
 comment :: Parsec String () Char

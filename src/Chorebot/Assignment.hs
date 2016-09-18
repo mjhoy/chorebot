@@ -20,7 +20,7 @@ instance Ord Assignment where
     (Assignment _ _ d' _) = d `compare` d'
 
 assign :: Doer -> UTCTime -> Chore -> Assignment
-assign doer date chore = Assignment chore doer date (difficulty chore)
+assign doer' date' chore' = Assignment chore' doer' date' (difficulty chore')
 
 chkPats :: [Pattern] -> Chore -> Bool
 chkPats pats c = any chkPat pats

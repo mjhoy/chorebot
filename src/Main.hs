@@ -4,8 +4,6 @@ import System.IO
 import System.Exit
 import System.Directory
 import System.Random
-import Control.Monad
-import Data.Maybe
 import Data.Time
 import Data.List
 import Options.Applicative
@@ -26,7 +24,7 @@ import Chorebot.Time
 
 -- helper function
 putErr :: String -> IO ()
-putErr str = hPutStrLn stderr str
+putErr string = hPutStrLn stderr string
 
 -- data structure to hold the options passed to the `chorebot`
 -- command.
@@ -75,18 +73,18 @@ main = do
   -- parse assignments
   let assignmentfn = "assignment-history.txt"
   assignmentsExists <- doesFileExist assignmentfn
-  assignments <- do
+  assigns <- do
     case assignmentsExists of
       True -> do
         assignmenttxt <- readFile assignmentfn
         case runAssignmentParser chores doers assignmentfn assignmenttxt of
-          Right assignments' -> return assignments'
+          Right assigns' -> return assigns'
           Left err -> do
             putErr err
             exitFailure
       False -> return []
 
-  let profiles = map (buildProfile assignments) doers
+  let profiles = map (buildProfile assigns) doers
 
   (Cmd t' c) <- execParser (info (helper <*> cmd)
                            ( fullDesc
@@ -112,7 +110,7 @@ main = do
       mapM_ (putStrLn . printDoer) doers
 
     "list-assignment-history" ->
-      putStr $ printAssignments assignments
+      putStr $ printAssignments assigns
 
     "list-profiles" -> do
       putStrLn "name         diff/day  prev chores"
@@ -122,21 +120,21 @@ main = do
     "generate-doc" -> do
       readmetxt <- readFile "README.org"
       let doc = readOrg def readmetxt
-          str = writeHtmlString def (handleError doc)
+          html = writeHtmlString def (handleError doc)
           prefix = "<!DOCTYPE html><head><title>Chorebot!</title>" ++
                    "<style>body { font-family: Helvetica, sans-serif; max-width: 600px; margin: 1em auto; }</style>" ++
                    "<body>"
           suffix = "</body></html>"
-      putStrLn (prefix ++ str ++ suffix)
+      putStrLn (prefix ++ html ++ suffix)
 
     "distribute" -> do
       gen <- getStdGen
 
       -- generate 1000 rounds of possible chore assignments
       let nIter = 1000
-          (possibleAssignments, didForce, gen') = foldl' iterDist ([],False,gen) (take nIter $ repeat ())
+          (possibleAssignments, didForce, _gen) = foldl' iterDist ([],False,gen) (take nIter $ repeat ())
           iterDist (acc, dF, g) _ =
-            let (newAssignments, dF', g') = distribute profiles chores assignments t g
+            let (newAssignments, dF', g') = distribute profiles chores assigns t g
             in (newAssignments:acc, dF || dF', g')
 
       case didForce of
@@ -147,11 +145,10 @@ main = do
         False -> do
 
           let rankedPossibilities = zip (map (rank profiles) possibleAssignments) possibleAssignments
-              ((fstRank, fstAssignments):_rest) =
-                sortBy (\(r1,_) (r2,_) -> r1 `compare` r2) rankedPossibilities
-          -- debugging:
-          -- putStrLn $ "total ranking: " ++ (show fstRank)
-          putStr $ printAssignments fstAssignments
+
+          case sortBy (\(x,_) (y,_) -> x `compare` y) rankedPossibilities of
+            ((_rank, newAssigns):_rest) -> putStr $ printAssignments newAssigns
+            _ -> return ()
 
     _ -> do
       putErr "unknown action (use --help for more information)"

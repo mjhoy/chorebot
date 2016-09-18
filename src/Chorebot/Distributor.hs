@@ -1,7 +1,8 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Chorebot.Distributor where
+module Chorebot.Distributor ( distribute
+                            ) where
 
 import Data.Time
 import Data.List
@@ -14,19 +15,16 @@ import Control.Monad.Reader
 import Control.Monad.Extra
 import Data.Maybe
 
-import Chorebot.Doer
 import Chorebot.Chore
 import Chorebot.Assignment
 import Chorebot.Profile
-
-import Debug.Trace
 
 data PendingChore = PendingChore { _pendingChore :: Chore
                                  , _assignedCount :: Int
                                  } deriving (Eq)
 
 mkPending :: Chore -> PendingChore
-mkPending chore = PendingChore chore (count chore)
+mkPending chore' = PendingChore chore' (count chore')
 
 decPending :: PendingChore -> Maybe PendingChore
 decPending p | ac > 1 = Just (p { _assignedCount = ac - 1 })
@@ -82,7 +80,7 @@ runC (C k) conf st gen = runIdentity (runStateT (runReaderT (runRandT k gen) con
 -- Public-facing function. Delegate to the C monad to actually run the
 -- algorithm. Set up our initial reader config and state.
 distribute :: [Profile] -> [Chore] -> [Assignment] -> UTCTime -> StdGen -> ([Assignment], Bool, StdGen)
-distribute profiles chores assignments now gen =
+distribute profs chores assigns now gen =
   let (((as, hitSc), gen'), _) = runC distribute' conf st gen
   in (as, hitSc, gen')
   where
@@ -90,8 +88,8 @@ distribute profiles chores assignments now gen =
                 , newAssignments = []
                 , sanityCheck = 0
                 , permAssignments = [] }
-    conf = mkCConf now assignments profiles sclimit
-    sclimit = (length chores) * (length profiles) + 50
+    conf = mkCConf now assigns profs sclimit
+    sclimit = (length chores) * (length profs) + 50
 
 -- The distribution algorithm.
 distribute' :: C ([Assignment], Bool)
@@ -119,7 +117,6 @@ askSanityCheckLimit = liftM sanityCheckLimit ask
 removeUneccessaryChores :: C ()
 removeUneccessaryChores = do
   st <- get
-  t <- askTime
   c' <- filterM choreNeedsAssignment (pendingChores st)
   let st' = st { pendingChores = c' }
   put st'
@@ -150,7 +147,7 @@ assignPerm prof pending = do
       i' = case lookup prof pa of
         Just i  -> i + 1
         Nothing -> 1
-  st <- put $ st { permAssignments = (prof,i'):pa }
+  put $ st { permAssignments = (prof,i'):pa }
   return ()
 
 assignPending :: Profile -> PendingChore -> C Assignment
@@ -173,10 +170,9 @@ assignPending prof pending = do
 -- Step 2: distribute permanent chores.
 distributePerm :: C ()
 distributePerm = do
-  profiles <- liftM profiles ask
-  now <- askTime
+  profs <- liftM profiles ask
 
-  forM_ profiles $ \p -> do
+  forM_ profs $ \p -> do
     -- check the current pending chores that are permanently assigned
     -- to `p`.
     let doer' = pdoer p
@@ -209,11 +205,10 @@ sortChores = do
 -- hit the sanity check limit or not.
 distributeAll :: C Bool
 distributeAll = do
-    now <- askTime
-    profiles <- askProfiles
+    profs <- askProfiles
 
     -- Randomize profiles.
-    sortedProfiles <- randomSort profiles
+    sortedProfs <- randomSort profs
 
     lim <- askSanityCheckLimit
 
@@ -227,7 +222,7 @@ distributeAll = do
             else return True
 
     whileM $ do
-      mapM_ distributeOne sortedProfiles
+      mapM_ distributeOne sortedProfs
       checkIter
 
     st <- get
@@ -244,10 +239,9 @@ distributeAll = do
 distributeOne :: Profile -> C ()
 distributeOne profile = do
   lim <- askSanityCheckLimit
-  now <- askTime
   st <- get
   let chores = pendingChores st
-      assignments = newAssignments st
+      assigns = newAssignments st
       doer' = pdoer profile
       sc = sanityCheck st
       permAssignmentCount = fromMaybe 0 $ lookup profile (permAssignments st)
@@ -255,7 +249,7 @@ distributeOne profile = do
         let c = _pendingChore pending
         in or [ sc >= lim, -- force assignment if sanity check is above limit.
                 not $ or [ (hasVetoed doer' c),
-                           (elem c $ map chore (filter ((== (pdoer profile)) . doer) assignments)),
+                           (elem c $ map chore (filter ((== (pdoer profile)) . doer) assigns)),
                            (elem c $ latestChores profile)
                          ]
               ]

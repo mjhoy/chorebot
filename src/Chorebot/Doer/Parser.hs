@@ -2,12 +2,9 @@ module Chorebot.Doer.Parser (runDoersParser)
        where
 
 import Text.Parsec
-import Text.Parsec.Error
 import Control.Monad
 import Data.Char
-import Data.List.Extra (trim)
 import Data.Time.Clock (UTCTime)
-import Data.Time.Format (parseTimeM, defaultTimeLocale)
 import Data.List.Extra
 
 import Chorebot.ParserHelper
@@ -30,7 +27,7 @@ processKeys kvs = (_vet, _ass, _abs, _unknown)
     _vet = subP "veto"
     _ass = subP "assigned"
     _abs = map cbParseDate $ sub "absent"
-    _unknown = filter (\(k, v) ->
+    _unknown = filter (\(k, _) ->
                         k /= "veto" &&
                         k /= "assigned" &&
                         k /= "absent") kvs''
@@ -40,12 +37,12 @@ doerParser = do
   skipMany commentOrNewline
   _name <- liftM trim $ many1 $ noneOf [ '<' ]
   _email <- emailParser
-  newline
+  _ <- newline
   kvs <- (keyvalue `endBy` newline) <?> "key values"
   let (_vet, _ass, _abs, _unknown) = processKeys kvs
 
   -- error on unknown keys
-  forM_ _unknown $ \(k, v) ->
+  forM_ _unknown $ \(k, _) ->
     unexpected ("key: " ++ k)
 
   -- error on bad time parsing

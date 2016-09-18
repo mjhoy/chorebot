@@ -28,10 +28,10 @@ instance Ord Profile where
 buildProfile :: [Assignment] -> -- List of all/any chore assignments
                 Doer ->
                 Profile
-buildProfile assignments doer' = Profile doer' assignments''
+buildProfile assigns doer' = Profile doer' assignments''
   where
     assignments'' = sortBy (\a b -> (date a) `compare` (date b)) assignments'
-    assignments' = filter byDoer assignments
+    assignments' = filter byDoer assigns
     byDoer a = (doer a) == doer'
 
 -- helper function
@@ -48,25 +48,25 @@ secondsInDay = 60 * 60 * 24
 
 latestChores :: Profile ->
                 [Chore]
-latestChores (Profile d []) = []
-latestChores (Profile d as@(a:_)) =
+latestChores (Profile _ []) = []
+latestChores (Profile _ as@(a:_)) =
     let latest = foldl' lateDate (date a) as
-    in map chore $ filter (\a -> (date a) == latest) as
+    in map chore $ filter (\a' -> (date a') == latest) as
   where
     lateDate :: UTCTime -> Assignment -> UTCTime
-    lateDate t a = let t' = date a
+    lateDate t a' = let t' = date a'
                    in if t' > t then t' else t
 
 difficultyPerDay :: UTCTime ->  -- the current time
                     Profile ->
                     Double
-difficultyPerDay now (Profile d as) =
+difficultyPerDay now (Profile _doer as) =
   -- get the earliest date in `as'
     let earliest  = foldl' earlyDate now as
         diffTime  = max secondsInDay $ round $ diffUTCTime now earliest
         daysSince :: Double
         daysSince = fromIntegral diffTime / fromIntegral secondsInDay
-        totalDifficulty = foldl' (\d a -> d + (adiff a)) 0 as
+        totalDifficulty = foldl' (\diff a -> diff + (adiff a)) 0 as
     in fromIntegral totalDifficulty / daysSince
   where
     earlyDate :: UTCTime -> Assignment -> UTCTime

@@ -3,7 +3,6 @@ module Chorebot.Assignment.Parser
        where
 
 import Text.Parsec
-import Text.Parsec.Char
 import Data.Time
 import Data.Either
 import Control.Monad
@@ -32,7 +31,7 @@ assignmentParser = do
   _email <- emailParser
   _ <- char ':'
   skipMany $ char ' '
-  newline
+  _ <- newline
   as <- manyTill (assignmentParser' _email) $
     (lookAhead (string "\n") >> return ()) <|> eof
   skipMany commentOrNewline
@@ -43,7 +42,7 @@ assignmentParser = do
       _chore <- identParser
       skipMany $ char ' '
       _diff <- liftM read $ (many1 digit <?> "difficulty")
-      newline
+      _ <- newline
       return $ ProtoAssignment _chore _email _diff
 
 dateAndAssignmentsParser :: Parsec String () (UTCTime, [ProtoAssignment])
@@ -90,13 +89,13 @@ resolveAssignment chores doers atime proto = do
       cmap = Map.fromList $ map (\c -> (ident c, c)) chores
       dmap :: Map String Doer
       dmap = Map.fromList $ map (\d -> (email d, d)) doers
-  chore <- case Map.lookup (_p_chore proto) cmap of
+  chore' <- case Map.lookup (_p_chore proto) cmap of
     Just x  -> return x
     Nothing -> Left $ "chore not found: <" ++ (_p_chore proto) ++ ">"
-  doer  <- case Map.lookup (_p_doer proto) dmap of
+  doer'  <- case Map.lookup (_p_doer proto) dmap of
     Just x  -> return x
     Nothing -> Left $ "doer not found: <" ++ (_p_doer proto) ++ ">"
-  return $ Assignment chore doer atime (_p_adiff proto)
+  return $ Assignment chore' doer' atime (_p_adiff proto)
 
 runAssignmentParser :: [Chore] -> -- list of parsed chores
                        [Doer]  ->  -- list of parsed doers

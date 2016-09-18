@@ -2,7 +2,6 @@ module Chorebot.Chore.Parser (runChoresParser)
        where
 
 import Text.Parsec
-import Text.Parsec.Error
 import Chorebot.ParserHelper
 import Chorebot.Chore
 
