@@ -34,7 +34,7 @@ WIP! Document how to:
 
 ** Contributing
 
-WIP! Write a CONTRIBUTING.md file.
+Please see the [[./CONTRIBUTING.org][CONTIBUTING.org]] file.
 
 ** Defining chores
 

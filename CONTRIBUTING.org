@@ -1,0 +1,24 @@
+* Contributing to Chorebot
+** Setting up your development environment
+
+You'll need to be able to compile Haskell code and also download and
+compile all of Chorebot's dependencies.
+
+The easiest way to get started is to use Stack:
+
+https://docs.haskellstack.org/en/stable/README/#how-to-install
+
+In the Chorebot repository, you can then run:
+
+#+begin_src sh
+stack build
+#+end_src
+
+It will take a while the first time you do this, to download and
+compile all of Chorebot's dependencies.
+
+** Making a change
+
+Easy: use Github to fork the Chorebot repository, make a new branch,
+push up your changes, and open a pull request. Make sure it compiles
+first!
