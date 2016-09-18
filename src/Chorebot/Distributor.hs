@@ -24,7 +24,7 @@ data PendingChore = PendingChore { _pendingChore :: Chore
                                  } deriving (Eq)
 
 mkPending :: Chore -> PendingChore
-mkPending chore' = PendingChore chore' (count chore')
+mkPending chore' = PendingChore chore' (choreCount chore')
 
 decPending :: PendingChore -> Maybe PendingChore
 decPending p | ac > 1 = Just (p { _assignedCount = ac - 1 })
@@ -55,7 +55,7 @@ data CConf = CConf
 -- assignments is sorted to begin with.
 mkCConf :: UTCTime -> [Assignment] -> [Profile] -> Int -> CConf
 mkCConf t a p sc = CConf t a' p sc
-  where a' = let cmpDates a1 a2 = date a1 `compare` date a2
+  where a' = let cmpDates a1 a2 = assignmentDate a1 `compare` assignmentDate a2
              in reverse $ sortBy cmpDates a
 
 -- Our chore assignment monad. We want to capture state (the current
@@ -126,15 +126,15 @@ choreNeedsAssignment :: PendingChore -> C Bool
 choreNeedsAssignment (PendingChore c _) = do
   now <- askTime
   past <- askPastAssignments
-  let prevAssignment = find (\a' -> c == (chore a')) past
+  let prevAssignment = find (\a' -> c == (assignmentChore a')) past
   case prevAssignment of
     -- a' is the previous assignment of chore c.
     --
     -- calculate whether the time since last defined is greater
     -- than the interval.
-    Just a' -> let diff = diffUTCTime now (date a')
+    Just a' -> let diff = diffUTCTime now (assignmentDate a')
                    secInDay = 24 * 60 * 60
-                   intervalSeconds = fromIntegral $ (7 * interval c) * secInDay
+                   intervalSeconds = fromIntegral $ (7 * choreInterval c) * secInDay
                in return $ diff >= intervalSeconds
     Nothing -> return True
 
@@ -154,7 +154,7 @@ assignPending :: Profile -> PendingChore -> C Assignment
 assignPending prof pending = do
   st <- get
   now <- askTime
-  let doer' = pdoer prof
+  let doer' = profDoer prof
       c = _pendingChore pending
       assignment = assign doer' now c
       assignments' = assignment : (newAssignments st)
@@ -175,7 +175,7 @@ distributePerm = do
   forM_ profs $ \p -> do
     -- check the current pending chores that are permanently assigned
     -- to `p`.
-    let doer' = pdoer p
+    let doer' = profDoer p
     cs <- liftM pendingChores get
     let toAssign = filter (\pc -> doer' `isPermanentlyAssigned` (_pendingChore pc)) cs
     mapM_ (assignPerm p) toAssign
@@ -242,14 +242,14 @@ distributeOne profile = do
   st <- get
   let chores = pendingChores st
       assigns = newAssignments st
-      doer' = pdoer profile
+      doer' = profDoer profile
       sc = sanityCheck st
       permAssignmentCount = fromMaybe 0 $ lookup profile (permAssignments st)
       shouldAssign pending =
         let c = _pendingChore pending
         in or [ sc >= lim, -- force assignment if sanity check is above limit.
                 not $ or [ (hasVetoed doer' c),
-                           (elem c $ map chore (filter ((== (pdoer profile)) . doer) assigns)),
+                           (elem c $ map assignmentChore (filter ((== (profDoer profile)) . assignmentDoer) assigns)),
                            (elem c $ latestChores profile)
                          ]
               ]

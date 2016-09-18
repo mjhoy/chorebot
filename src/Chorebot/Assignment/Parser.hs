@@ -86,9 +86,9 @@ resolveAssignment :: [Chore] ->
                      Either String Assignment
 resolveAssignment chores doers atime proto = do
   let cmap :: Map String Chore
-      cmap = Map.fromList $ map (\c -> (ident c, c)) chores
+      cmap = Map.fromList $ map (\c -> (choreIdent c, c)) chores
       dmap :: Map String Doer
-      dmap = Map.fromList $ map (\d -> (email d, d)) doers
+      dmap = Map.fromList $ map (\d -> (doerEmail d, d)) doers
   chore' <- case Map.lookup (_p_chore proto) cmap of
     Just x  -> return x
     Nothing -> Left $ "chore not found: <" ++ (_p_chore proto) ++ ">"

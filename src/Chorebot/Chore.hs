@@ -1,22 +1,22 @@
 module Chorebot.Chore where
 
 -- a chore to be done
-data Chore = Chore { title :: String
-                   , ident :: String -- unique identifier
-                   , desc  :: String
-                   , interval :: Int
-                   , difficulty :: Int
-                   , count :: Int
+data Chore = Chore { choreTitle :: String
+                   , choreIdent :: String -- unique identifier
+                   , choreDesc  :: String
+                   , choreInterval :: Int
+                   , choreDifficulty :: Int
+                   , choreCount :: Int
                    } deriving (Show, Eq)
 
 printChore :: Chore -> String
 printChore chore =
-  let counts = if (count chore /= 1)
-               then " " ++ (show (count chore)) ++ "x "
+  let counts = if (choreCount chore /= 1)
+               then " " ++ (show (choreCount chore)) ++ "x "
                else " "
-      c = (title chore) ++ " <" ++ (ident chore) ++ "> " ++
-          ": " ++ (show $ interval chore) ++ counts ++
-          (show $ difficulty chore)
-  in case length (desc chore) of
+      c = (choreTitle chore) ++ " <" ++ (choreIdent chore) ++ "> " ++
+          ": " ++ (show $ choreInterval chore) ++ counts ++
+          (show $ choreDifficulty chore)
+  in case length (choreDesc chore) of
     0 -> c ++ "\n"
-    _ -> c ++ "\n" ++ (desc chore) ++ "\n"
+    _ -> c ++ "\n" ++ (choreDesc chore) ++ "\n"

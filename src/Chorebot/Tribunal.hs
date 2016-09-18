@@ -13,7 +13,7 @@ rank :: [Profile] ->
         [Assignment] ->
         Double
 rank profiles newAssignments = desirable + equitable
-  where getProf a = fromJust $ find (\p -> (doer a == pdoer p)) profiles
+  where getProf a = fromJust $ find (\p -> (assignmentDoer a == profDoer p)) profiles
         profsAs = zip (map getProf newAssignments) newAssignments
         desirable = foldl' (\s (p,a) -> s + rankDesirable p a) 0 profsAs
         equitable = rankEquitable $ groupSort profsAs
@@ -27,7 +27,7 @@ rankEquitable :: [(Profile, [Assignment])] ->
 rankEquitable profsAs = sum variances
   where variances  = map (\d -> abs $ (fromIntegral d) - average) totalDiffs
         average    = (fromIntegral $ sum totalDiffs) / (fromIntegral $ length profsAs)
-        totalDiff (_, assigns) = sum $ map adiff assigns
+        totalDiff (_, assigns) = sum $ map assignmentDiff assigns
         totalDiffs = map totalDiff profsAs
 
 -- Rank an assignment by its desirability.
@@ -47,19 +47,19 @@ rankDesirable profile assignment = if not assigned && daysSinceLastAssigned > 0
                                    then assignedDifficulty / daysSinceLastAssigned
                                    else 0
   where
-    assigned = isPermanentlyAssigned (pdoer profile) (chore assignment)
+    assigned = isPermanentlyAssigned (profDoer profile) (assignmentChore assignment)
 
     assignedDifficulty :: Double
-    assignedDifficulty = fromIntegral $ adiff assignment
+    assignedDifficulty = fromIntegral $ assignmentDiff assignment
 
     daysSinceLastAssigned :: Double
     daysSinceLastAssigned =
       case find sameChore sortedAssignments of
-        Just a0 -> let tdiffs = realToFrac $ diffUTCTime (date assignment) (date a0)
+        Just a0 -> let tdiffs = realToFrac $ diffUTCTime (assignmentDate assignment) (assignmentDate a0)
                        tdiffd = ((tdiffs / 60) / 60) / 24
                    in tdiffd
         Nothing -> -1
 
-    sameChore a = chore a == chore assignment
+    sameChore a = assignmentChore a == assignmentChore assignment
 
-    sortedAssignments = sortBy (\a b -> (date a) `compare` (date b)) (assignments profile)
+    sortedAssignments = sortBy (\a b -> (assignmentDate a) `compare` (assignmentDate b)) (profAssignments profile)

@@ -1,7 +1,7 @@
 module Chorebot.Profile
        ( Profile
-       , pdoer
-       , assignments
+       , profDoer
+       , profAssignments
        , latestChores
        , buildProfile
        , printProfile
@@ -18,21 +18,21 @@ import Data.Time
 
 -- A profile is simply a doer associated with their assigned chore
 -- history. And from this we can extrapolate interesting information.
-data Profile = Profile { pdoer :: Doer,
-                         assignments :: [Assignment]
+data Profile = Profile { profDoer :: Doer,
+                         profAssignments :: [Assignment]
                        } deriving (Eq, Show)
 
 instance Ord Profile where
-  p1 `compare` p2 = (pdoer p1) `compare` (pdoer p2)
+  p1 `compare` p2 = (profDoer p1) `compare` (profDoer p2)
 
 buildProfile :: [Assignment] -> -- List of all/any chore assignments
                 Doer ->
                 Profile
 buildProfile assigns doer' = Profile doer' assignments''
   where
-    assignments'' = sortBy (\a b -> (date a) `compare` (date b)) assignments'
+    assignments'' = sortBy (\a b -> (assignmentDate a) `compare` (assignmentDate b)) assignments'
     assignments' = filter byDoer assigns
-    byDoer a = (doer a) == doer'
+    byDoer a = (assignmentDoer a) == doer'
 
 -- helper function
 padString :: String -> Integer -> String
@@ -50,11 +50,11 @@ latestChores :: Profile ->
                 [Chore]
 latestChores (Profile _ []) = []
 latestChores (Profile _ as@(a:_)) =
-    let latest = foldl' lateDate (date a) as
-    in map chore $ filter (\a' -> (date a') == latest) as
+    let latest = foldl' lateDate (assignmentDate a) as
+    in map assignmentChore $ filter (\a' -> (assignmentDate a') == latest) as
   where
     lateDate :: UTCTime -> Assignment -> UTCTime
-    lateDate t a' = let t' = date a'
+    lateDate t a' = let t' = assignmentDate a'
                    in if t' > t then t' else t
 
 difficultyPerDay :: UTCTime ->  -- the current time
@@ -66,11 +66,11 @@ difficultyPerDay now (Profile _doer as) =
         diffTime  = max secondsInDay $ round $ diffUTCTime now earliest
         daysSince :: Double
         daysSince = fromIntegral diffTime / fromIntegral secondsInDay
-        totalDifficulty = foldl' (\diff a -> diff + (adiff a)) 0 as
+        totalDifficulty = foldl' (\diff a -> diff + (assignmentDiff a)) 0 as
     in fromIntegral totalDifficulty / daysSince
   where
     earlyDate :: UTCTime -> Assignment -> UTCTime
-    earlyDate t a = let t' = date a
+    earlyDate t a = let t' = assignmentDate a
                     in if t' < t then t' else t
 
 -- for the format:
@@ -83,6 +83,6 @@ printProfile :: UTCTime -> -- current time
                 Profile ->
                 String
 printProfile now prof =
-  (padString (name (pdoer prof)) 12) ++ " " ++
+  (padString (doerName (profDoer prof)) 12) ++ " " ++
   (padString (printf "%.2f" (difficultyPerDay now prof)) 9) ++ " " ++
-  (concat $ intersperse ", " $ map ident (latestChores prof))
+  (concat $ intersperse ", " $ map choreIdent (latestChores prof))

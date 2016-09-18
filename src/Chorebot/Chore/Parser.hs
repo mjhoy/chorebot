@@ -51,7 +51,7 @@ choresParser = do
   unchore
   chores <- choreParser `endBy` unchore
   -- ensure identifies are unique
-  case findDup (map ident chores) of
+  case findDup (map choreIdent chores) of
     Just x  -> unexpected $ "duplicate chore identified: " ++ x
     Nothing -> return ()
   return chores
