@@ -89,7 +89,7 @@ main = do
   (Cmd t' c) <- execParser (info (helper <*> cmd)
                            ( fullDesc
                            <> progDesc "chorebot"
-                           <> header "chorebot -- blah blah"))
+                           <> header "chorebot -- distribute your chores"))
   t <- t' -- run the date IO action
 
   case c of
