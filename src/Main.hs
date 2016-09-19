@@ -26,10 +26,15 @@ import Chorebot.Time
 putErr :: String -> IO ()
 putErr string = hPutStrLn stderr string
 
--- data structure to hold the options passed to the `chorebot`
--- command.
-data Cmd = Cmd { _date :: IO UTCTime
-               , _command :: String }
+data StdOpts = StdOpts { stdOptsDate :: IO UTCTime }
+
+-- data structure to represent the chorebot subcommand
+data Command = ListChores
+             | ListDoers
+             | ListAssignmentHistory
+             | ListProfiles StdOpts
+             | GenerateDoc
+             | Distribute StdOpts
 
 -- parse dates
 datep :: ReadM UTCTime
@@ -37,17 +42,42 @@ datep = eitherReader $ \arg -> case (cbParseDate arg) of
   Just t -> return t
   Nothing -> Left $ "cannot parse date `" ++ arg ++ "`; must be in YYYY/MM/DD format"
 
-cmd :: Parser Cmd
-cmd = Cmd
+stdOpts :: Parser StdOpts
+stdOpts = StdOpts
   <$> (option (liftA return datep)
        (long "date"
         <> short 'd'
         <> metavar "DATE"
-        <> help ("If provided, Chorebot acts as if DATE were " ++
-                 "the current date. Format as YYYY/MM/DD.")
+        <> help ("If provided, act as if current date were DATE. Format as YYYY/MM/DD.")
         <> value getCurrentTime))
-  <*> argument str ( metavar "COMMAND"
-                     <> help "The command to run" )
+
+cmd :: Parser Command
+cmd = subparser
+  ( command "list-chores"
+    (info (helper <*> pure ListChores)
+      (progDesc "List the current chores") )
+
+ <> command "list-doers"
+    (info (helper <*> pure ListDoers)
+      (progDesc "List the current chore-doers") )
+
+ <> command "list-assignment-history"
+    (info (helper <*> pure ListAssignmentHistory)
+      (progDesc "List past chore assignments") )
+
+ <> command "list-profiles"
+    (info (ListProfiles <$> (helper <*> stdOpts))
+      (progDesc "List profile info") )
+
+ <> command "generate-doc"
+    (info (helper <*> pure GenerateDoc)
+      (progDesc "Generate HTML documentation for chorebot") )
+
+ <> command "distribute"
+    (info (Distribute <$> (helper <*> stdOpts))
+      (progDesc "Make new chore assignments") )
+
+  )
 
 main :: IO ()
 main = do
@@ -86,38 +116,30 @@ main = do
 
   let profiles = map (buildProfile assigns) doers
 
-  (Cmd t' c) <- execParser (info (helper <*> cmd)
-                           ( fullDesc
-                           <> progDesc "chorebot"
-                           <> header "chorebot -- distribute your chores"))
-  t <- t' -- run the date IO action
+  c <- execParser (info (helper <*> cmd)
+                    ( fullDesc
+                      <> progDesc "chorebot"
+                      <> header "chorebot -- distribute your chores"))
+  -- t <- t' -- run the date IO action
 
   case c of
 
-    "--help" ->
-      putErr $ "usage: chorebot COMMAND\n\n" ++
-               "commands:\n" ++
-               "  list-chores              List current chores\n" ++
-               "  list-doers               List current chore-doers\n" ++
-               "  list-assignment-history  List past chore assignments\n" ++
-               "  list-profiles            List profile info\n" ++
-               "  distribute               Make new chore assignments"
-
-    "list-chores" ->
+    ListChores ->
       mapM_ (putStrLn . printChore) chores
 
-    "list-doers" ->
+    ListDoers ->
       mapM_ (putStrLn . printDoer) doers
 
-    "list-assignment-history" ->
+    ListAssignmentHistory ->
       putStr $ printAssignments assigns
 
-    "list-profiles" -> do
+    (ListProfiles opts) -> do
+      t <- (stdOptsDate opts)
       putStrLn "name         diff/day  prev chores"
       putStrLn "----------------------------------"
       mapM_ (putStrLn . (printProfile t)) profiles
 
-    "generate-doc" -> do
+    GenerateDoc -> do
       readmetxt <- readFile "README.org"
       let doc = readOrg def readmetxt
           html = writeHtmlString def (handleError doc)
@@ -127,7 +149,8 @@ main = do
           suffix = "</body></html>"
       putStrLn (prefix ++ html ++ suffix)
 
-    "distribute" -> do
+    (Distribute opts) -> do
+      t <- (stdOptsDate opts)
       gen <- getStdGen
 
       -- generate 1000 rounds of possible chore assignments
@@ -149,7 +172,3 @@ main = do
           case sortBy (\(x,_) (y,_) -> x `compare` y) rankedPossibilities of
             ((_rank, newAssigns):_rest) -> putStr $ printAssignments newAssigns
             _ -> return ()
-
-    _ -> do
-      putErr "unknown action (use --help for more information)"
-      exitFailure
