@@ -24,13 +24,29 @@ program. You can find the source code on Github here:
 
 ** Installing/running
 
+You will need GHC (the Glorious Haskell Compiler) and a few Haskell
+packages to build and install Chorebot. The easiest way is to install
+[[http://www.haskellstack.org][Stack]]:
+
+#+begin_src sh
+# to get the Chorebot code
+git clone https://github.com/mjhoy/chorebot.git
+
+# to install stack
+curl -sSL https://get.haskellstack.org/ | sh
+
+cd chorebot
+stack build
+#+end_src
+
+Now, stack will automatically install GHC and other dependencies, and
+then build Chorebot.
+
 WIP! Document how to:
 
-1. Download the source code, set up an environment to compile
-   in (stack), compile Chorebot
-2. Set up all the data files (doers.txt, chores.txt and so on)
-3. Compile a static binary to send up to a shared host running Linux
-4. Define cron tasks for sending out weekly emails
+1. Set up all the data files (doers.txt, chores.txt and so on)
+2. Compile a static binary to send up to a shared host running Linux
+3. Define cron tasks for sending out weekly emails
 
 ** Contributing
 
