@@ -40,6 +40,15 @@ stack setup # set up GHC
 stack build # build dependencies and Chorebot
 #+end_src
 
+If everything builds, you can then execute Chorebot using Stack like
+so:
+
+#+begin_src sh
+stack exec -- chorebot -h            # chorebote help
+stack exec -- chorebot --list-chores # list chorebot chores
+# and so on
+#+end_src
+
 WIP! Document how to:
 
 1. Set up all the data files (doers.txt, chores.txt and so on)
