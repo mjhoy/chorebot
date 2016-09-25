@@ -36,11 +36,9 @@ git clone https://github.com/mjhoy/chorebot.git
 curl -sSL https://get.haskellstack.org/ | sh
 
 cd chorebot
-stack build
+stack setup # set up GHC
+stack build # build dependencies and Chorebot
 #+end_src
-
-Now, stack will automatically install GHC and other dependencies, and
-then build Chorebot.
 
 WIP! Document how to:
 
