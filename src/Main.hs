@@ -8,9 +8,6 @@ import Data.Time
 import Data.List
 import Options.Applicative
 
-import Text.Pandoc
-import Text.Pandoc.Error (handleError)
-
 import Chorebot.Chore
 import Chorebot.Chore.Parser
 import Chorebot.Doer
@@ -33,7 +30,6 @@ data Command = ListChores
              | ListDoers
              | ListAssignmentHistory
              | ListProfiles StdOpts
-             | GenerateDoc
              | Distribute StdOpts
 
 -- parse dates
@@ -68,10 +64,6 @@ cmd = subparser
  <> command "list-profiles"
     (info (ListProfiles <$> (helper <*> stdOpts))
       (progDesc "List profile info") )
-
- <> command "generate-doc"
-    (info (helper <*> pure GenerateDoc)
-      (progDesc "Generate HTML documentation for chorebot") )
 
  <> command "distribute"
     (info (Distribute <$> (helper <*> stdOpts))
@@ -138,16 +130,6 @@ main = do
       putStrLn "name         diff/day  prev chores"
       putStrLn "----------------------------------"
       mapM_ (putStrLn . (printProfile t)) profiles
-
-    GenerateDoc -> do
-      readmetxt <- readFile "README.org"
-      let doc = readOrg def readmetxt
-          html = writeHtmlString def (handleError doc)
-          prefix = "<!DOCTYPE html><head><title>Chorebot!</title>" ++
-                   "<style>body { font-family: Helvetica, sans-serif; max-width: 600px; margin: 1em auto; }</style>" ++
-                   "<body>"
-          suffix = "</body></html>"
-      putStrLn (prefix ++ html ++ suffix)
 
     (Distribute opts) -> do
       t <- (stdOptsDate opts)
