@@ -1,7 +1,6 @@
 module Chorebot.TimeSpec where
 
 import SpecHelper
-import Chorebot.Time
 
 spec :: Spec
 spec = do

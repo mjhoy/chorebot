@@ -3,7 +3,6 @@ module Chorebot.Doer.ParserSpec where
 import SpecHelper
 import Chorebot.Doer.Parser
 import Chorebot.Doer
-import Paths_chorebot
 
 spec :: Spec
 spec = do

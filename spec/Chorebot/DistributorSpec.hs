@@ -3,8 +3,6 @@ module Chorebot.DistributorSpec where
 import SpecHelper
 import Chorebot.Distributor
 import Chorebot.Profile
-import Chorebot.Assignment
-import Chorebot.Chore
 import System.Random
 
 spec :: Spec
@@ -25,7 +23,7 @@ spec = do
 
         -- first assignment. should assign Hildegard the chore of
         -- baking cookies.
-        let (newAssignments, sc, _) =
+        let (_newAssignments, sc, _) =
               distribute [prof] chores assignments now gen
 
         sc `shouldBe` True

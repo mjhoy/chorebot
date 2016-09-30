@@ -11,7 +11,7 @@ spec = do
     it "should give us the difficulty over the number of days" $ do
 
       let (Just now) = cbParseDate "2016/01/15"
-      (chores, doers, assignments) <- fixtureData
+      (_chores, doers, assignments) <- fixtureData
 
       let (hildegardProfile:_) = map (buildProfile assignments) doers
 
