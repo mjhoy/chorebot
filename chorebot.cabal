@@ -32,7 +32,7 @@ executable chorebot
                      , Chorebot.Time
                      , Chorebot.Tribunal
   -- other-extensions:    
-  build-depends:       base   >=4.8   && <4.9
+  build-depends:       base   >=4.7   && <4.9
 
                        -- chorebot dependencies
                      , parsec >=3.1.9 && <3.2
@@ -71,7 +71,7 @@ test-suite spec
                      , Chorebot.ProfileSpec
                      , Chorebot.TimeSpec
                      , SpecHelper
-  build-depends:       base   >=4.8   && <4.9
+  build-depends:       base   >=4.7   && <4.9
 
                        -- test dependencies
                      , hspec
