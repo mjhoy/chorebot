@@ -1,0 +1,6 @@
+language: haskell
+
+ghc: 7.10
+
+script:
+  - cabal configure --enable-tests --ghc-options="-Wall -Werror" && cabal build && cabal test

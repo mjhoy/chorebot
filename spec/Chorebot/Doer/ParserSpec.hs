@@ -20,9 +20,9 @@ spec = do
 
         let (hildegard:_) = doers
 
-        name  hildegard `shouldBe` "St. Hildegard"
-        email hildegard `shouldBe` "hildegard@test.com"
-        let (v1:v2:v3:_) = vetoes hildegard
+        doerName  hildegard `shouldBe` "St. Hildegard"
+        doerEmail hildegard `shouldBe` "hildegard@test.com"
+        let (v1:v2:v3:_) = doerVetoes hildegard
         v1 `shouldBe` (Pattern "mop*")
         v2 `shouldBe` (Pattern "clean-room")
         v3 `shouldBe` (Pattern "extra-space")

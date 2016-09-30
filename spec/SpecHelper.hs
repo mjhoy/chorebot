@@ -20,9 +20,9 @@ import Chorebot.Assignment.Parser
 import Paths_chorebot
 
 doersFixtureFile, choresFixtureFile, assignmentsFixtureFile :: IO FilePath
-doersFixtureFile = getDataFileName "spec/fixtures/doers.txt"
-choresFixtureFile = getDataFileName "spec/fixtures/chores.txt"
-assignmentsFixtureFile = getDataFileName "spec/fixtures/assignment-history.txt"
+doersFixtureFile = getDataFileName "doers.txt"
+choresFixtureFile = getDataFileName "chores.txt"
+assignmentsFixtureFile = getDataFileName "assignment-history.txt"
 
 fixtureData :: IO ([Chore], [Doer], [Assignment])
 fixtureData = do
