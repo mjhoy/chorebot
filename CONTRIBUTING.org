@@ -22,3 +22,28 @@ compile all of Chorebot's dependencies.
 Easy: use Github to fork the Chorebot repository, make a new branch,
 push up your changes, and open a pull request. Make sure it compiles
 first!
+
+** Testing
+
+It's good to write tests for changes if you can. See the existing
+tests under =spec/= for examples.
+
+When you open a pull request, tests are run automatically at
+[[https://travis-ci.org/mjhoy/chorebot][travis-ci.org]]. While you are making changes, it is good to run:
+
+#+begin_src sh
+stack test
+#+end_src
+
+as you go, to see if you caused any test failures. Before you send the
+pull request, run
+
+#+begin_src sh
+stack test --pedantic
+#+end_src
+
+to make sure you catch and fix all GHC warnings. I won't accept any
+code that is not passing this!
+
+If you are not making any changes to code, include "=[ci skip]=" or
+"=[skip ci]=" in your commit message.
