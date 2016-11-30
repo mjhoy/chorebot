@@ -6,6 +6,7 @@ import Control.Monad
 import Data.Char
 import Data.Time.Clock (UTCTime)
 import Data.List.Extra
+import Data.Maybe (isJust)
 
 import Chorebot.ParserHelper
 import Chorebot.Time
@@ -15,9 +16,10 @@ processKeys :: [(String, [String])] ->
                ([Pattern],           -- vetos
                 [Pattern],           -- assigned
                 [Maybe UTCTime],     -- absent
+                Bool,                -- retired
                 [(String, [String])] -- unknown key/values
                )
-processKeys kvs = (_vet, _ass, _abs, _unknown)
+processKeys kvs = (_vet, _ass, _abs, _ret, _unknown)
   where
     kvs' = groupSort kvs
     kvs'' = for kvs' $ \(k,v) -> (k, concat v)
@@ -27,10 +29,12 @@ processKeys kvs = (_vet, _ass, _abs, _unknown)
     _vet = subP "veto"
     _ass = subP "assigned"
     _abs = map cbParseDate $ sub "absent"
+    _ret = isJust $ find (\(k,_) -> k == "retired") kvs''
     _unknown = filter (\(k, _) ->
                         k /= "veto" &&
                         k /= "assigned" &&
-                        k /= "absent") kvs''
+                        k /= "absent" &&
+                        k /= "retired") kvs''
 
 doerParser :: Parsec String () Doer
 doerParser = do
@@ -39,7 +43,7 @@ doerParser = do
   _email <- emailParser
   _ <- newline
   kvs <- (keyvalue `endBy` newline) <?> "key values"
-  let (_vet, _ass, _abs, _unknown) = processKeys kvs
+  let (_vet, _ass, _abs, _ret, _unknown) = processKeys kvs
 
   -- error on unknown keys
   forM_ _unknown $ \(k, _) ->
@@ -51,7 +55,7 @@ doerParser = do
       Just t -> return t
       Nothing -> unexpected ("time format: please use YYYY/MM/DD")
 
-  return $ Doer _name _email _vet _ass _abs'
+  return $ Doer _name _email _vet _ass _abs' _ret
 
   where
     keyvalue = do

@@ -6,11 +6,12 @@ import Text.Regex (mkRegex, Regex)
 newtype Pattern = Pattern { unpattern :: String }
                   deriving (Show, Eq)
 
-data Doer = Doer { doerName   :: String,
-                   doerEmail  :: String,
-                   doerVetoes :: [Pattern],
-                   doerPerm   :: [Pattern],
-                   doerAbsent :: [UTCTime]
+data Doer = Doer { doerName    :: String,
+                   doerEmail   :: String,
+                   doerVetoes  :: [Pattern],
+                   doerPerm    :: [Pattern],
+                   doerAbsent  :: [UTCTime],
+                   doerRetired :: Bool
                  } deriving (Eq, Show)
 
 instance Ord Doer where

@@ -18,6 +18,7 @@ import Data.Maybe
 import Chorebot.Chore
 import Chorebot.Assignment
 import Chorebot.Profile
+import Chorebot.Doer (doerRetired)
 
 data PendingChore = PendingChore { _pendingChore :: Chore
                                  , _assignedCount :: Int
@@ -88,8 +89,9 @@ distribute profs chores assigns now gen =
                 , newAssignments = []
                 , sanityCheck = 0
                 , permAssignments = [] }
-    conf = mkCConf now assigns profs sclimit
-    sclimit = (length chores) * (length profs) + 50
+    conf = mkCConf now assigns profs' sclimit
+    sclimit = (length chores) * (length profs') + 50
+    profs' = filter (not . doerRetired . profDoer) profs
 
 -- The distribution algorithm.
 distribute' :: C ([Assignment], Bool)
